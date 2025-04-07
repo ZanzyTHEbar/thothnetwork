@@ -45,10 +45,13 @@ type MessageBroker struct {
 
 // Config holds configuration for the NATS message broker
 type Config struct {
-	URL      string
-	Username string
-	Password string
-	Token    string
+	URL           string
+	Username      string
+	Password      string
+	Token         string
+	MaxReconnects int
+	ReconnectWait time.Duration
+	Timeout       time.Duration
 }
 
 // NewMessageBroker creates a new NATS message broker
@@ -74,8 +77,6 @@ func (b *MessageBroker) Connect(ctx context.Context) error {
 	// Create connection options
 	opts := []nats.Option{
 		nats.Name("thothnetwork"),
-		nats.ReconnectWait(nats.DefaultReconnectWait),
-		nats.MaxReconnects(nats.DefaultMaxReconnect),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			b.logger.Warn("NATS disconnected", "error", err)
 		}),
@@ -85,6 +86,23 @@ func (b *MessageBroker) Connect(ctx context.Context) error {
 		nats.ClosedHandler(func(nc *nats.Conn) {
 			b.logger.Info("NATS connection closed")
 		}),
+	}
+
+	// Add reconnect options
+	if b.config.MaxReconnects > 0 {
+		opts = append(opts, nats.MaxReconnects(b.config.MaxReconnects))
+	} else {
+		opts = append(opts, nats.MaxReconnects(nats.DefaultMaxReconnect))
+	}
+
+	if b.config.ReconnectWait > 0 {
+		opts = append(opts, nats.ReconnectWait(b.config.ReconnectWait))
+	} else {
+		opts = append(opts, nats.ReconnectWait(nats.DefaultReconnectWait))
+	}
+
+	if b.config.Timeout > 0 {
+		opts = append(opts, nats.Timeout(b.config.Timeout))
 	}
 
 	// Add authentication options

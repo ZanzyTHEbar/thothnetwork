@@ -7,6 +7,9 @@ nats:
   username: ""
   password: ""
   token: ""
+  max_reconnects: 10
+  reconnect_wait: 1s
+  timeout: 2s
 
 libp2p:
   listen_addresses:
@@ -21,3 +24,41 @@ metrics:
   enabled: true
   host: 0.0.0.0
   port: 9090
+
+http:
+  host: 0.0.0.0
+  port: 8081
+  base_path: /api/v1
+  read_timeout: 10s
+  write_timeout: 10s
+  max_header_bytes: 1048576
+  shutdown_timeout: 5s
+
+mqtt:
+  broker_url: tcp://localhost:1883
+  client_id: thothnetwork-mqtt
+  username: ""
+  password: ""
+  clean_session: true
+  qos: 1
+  connect_timeout: 10s
+  keep_alive: 30s
+  ping_timeout: 5s
+  connect_retry_delay: 5s
+  max_reconnect_attempts: 10
+  topic_prefix: thothnetwork
+
+websocket:
+  host: 0.0.0.0
+  port: 8082
+  path: /ws
+  read_buffer_size: 1024
+  write_buffer_size: 1024
+  ping_interval: 30s
+  pong_wait: 60s
+
+tracing:
+  service_name: thothnetwork
+  service_version: 0.1.0
+  endpoint: http://localhost:14268/api/traces
+  enabled: false

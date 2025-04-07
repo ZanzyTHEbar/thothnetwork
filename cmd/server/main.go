@@ -12,11 +12,11 @@ import (
 
 func main() {
 	// Initialize logger
-	log := logger.NewLogger()
+	log := logger.NewDefaultLogger()
 	log.Info("Starting thothnetwork server...")
 
 	// Load configuration
-	cfg, err := config.LoadConfig()
+	cfg, err := config.Load("")
 	if err != nil {
 		log.Fatal("Failed to load configuration", "error", err)
 	}

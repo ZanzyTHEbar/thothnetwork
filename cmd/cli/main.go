@@ -27,7 +27,7 @@ func init() {
 
 func main() {
 	// Initialize logger
-	log := logger.NewLogger()
+	log := logger.NewDefaultLogger()
 
 	// Execute command
 	if err := rootCmd.Execute(); err != nil {

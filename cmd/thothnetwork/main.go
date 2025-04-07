@@ -39,17 +39,29 @@ func main() {
 	}
 
 	// Create logger
-	log, err := logger.NewLogger(cfg.Logger)
+	log, err := logger.NewLogger(logger.Config{
+		Level:  cfg.Logging.Level,
+		Format: cfg.Logging.Format,
+		Output: "stdout",
+	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create logger: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Create metrics collector
-	metricsCollector := metrics.NewMetrics(cfg.Metrics, log)
+	metricsCollector := metrics.NewMetrics(metrics.Config{
+		Host: cfg.Metrics.Host,
+		Port: cfg.Metrics.Port,
+	}, log)
 
 	// Create tracer
-	tracer, err := tracing.NewTracer(cfg.Tracing, log)
+	tracer, err := tracing.NewTracer(tracing.Config{
+		ServiceName:    cfg.Tracing.ServiceName,
+		ServiceVersion: cfg.Tracing.ServiceVersion,
+		Endpoint:       cfg.Tracing.Endpoint,
+		Enabled:        cfg.Tracing.Enabled,
+	}, log)
 	if err != nil {
 		log.Error("Failed to create tracer", "error", err)
 		os.Exit(1)
@@ -68,10 +80,19 @@ func main() {
 	// Create repositories
 	deviceRepo := memory.NewDeviceRepository()
 	twinRepo := memory.NewTwinRepository()
-	roomRepo := memory.NewRoomRepository()
+	// Room repository will be used in future implementations
+	_ = memory.NewRoomRepository()
 
 	// Create message broker
-	broker := nats.NewMessageBroker(cfg.NATS, log)
+	broker := nats.NewMessageBroker(nats.Config{
+		URL:           cfg.NATS.URL,
+		Username:      cfg.NATS.Username,
+		Password:      cfg.NATS.Password,
+		Token:         cfg.NATS.Token,
+		MaxReconnects: cfg.NATS.MaxReconnects,
+		ReconnectWait: cfg.NATS.ReconnectWait,
+		Timeout:       cfg.NATS.Timeout,
+	}, log)
 	if err := broker.Connect(ctx); err != nil {
 		log.Error("Failed to connect to NATS", "error", err)
 		os.Exit(1)
@@ -79,14 +100,46 @@ func main() {
 	defer broker.Disconnect(ctx)
 
 	// Create services
-	deviceSvc := deviceService.NewService(deviceRepo, twinRepo, broker, log)
+	// Device service will be used in future implementations
+	_ = deviceService.NewService(deviceRepo, twinRepo, broker, log)
 	pipelineSvc := pipelineService.NewService(broker, log)
 	adapterSvc := adapterService.NewService(broker, log)
 
 	// Create protocol adapters
-	httpAdpt := httpAdapter.NewAdapter(cfg.HTTP, log)
-	mqttAdpt := mqttAdapter.NewAdapter(cfg.MQTT, log)
-	wsAdpt := wsAdapter.NewAdapter(cfg.WebSocket, log)
+	httpAdpt := httpAdapter.NewAdapter(httpAdapter.Config{
+		Host:            cfg.HTTP.Host,
+		Port:            cfg.HTTP.Port,
+		BasePath:        cfg.HTTP.BasePath,
+		ReadTimeout:     cfg.HTTP.ReadTimeout,
+		WriteTimeout:    cfg.HTTP.WriteTimeout,
+		MaxHeaderBytes:  cfg.HTTP.MaxHeaderBytes,
+		ShutdownTimeout: cfg.HTTP.ShutdownTimeout,
+	}, log)
+
+	mqttAdpt := mqttAdapter.NewAdapter(mqttAdapter.Config{
+		BrokerURL:           cfg.MQTT.BrokerURL,
+		ClientID:            cfg.MQTT.ClientID,
+		Username:            cfg.MQTT.Username,
+		Password:            cfg.MQTT.Password,
+		CleanSession:        cfg.MQTT.CleanSession,
+		QoS:                 cfg.MQTT.QoS,
+		ConnectTimeout:      cfg.MQTT.ConnectTimeout,
+		KeepAlive:           cfg.MQTT.KeepAlive,
+		PingTimeout:         cfg.MQTT.PingTimeout,
+		ConnectRetryDelay:   cfg.MQTT.ConnectRetryDelay,
+		MaxReconnectAttempts: cfg.MQTT.MaxReconnectAttempts,
+		TopicPrefix:         cfg.MQTT.TopicPrefix,
+	}, log)
+
+	wsAdpt := wsAdapter.NewAdapter(wsAdapter.Config{
+		Host:            cfg.WebSocket.Host,
+		Port:            cfg.WebSocket.Port,
+		Path:            cfg.WebSocket.Path,
+		ReadBufferSize:  cfg.WebSocket.ReadBufferSize,
+		WriteBufferSize: cfg.WebSocket.WriteBufferSize,
+		PingInterval:    cfg.WebSocket.PingInterval,
+		PongWait:        cfg.WebSocket.PongWait,
+	}, log)
 
 	// Register adapters
 	if err := adapterSvc.RegisterAdapter("http", httpAdpt); err != nil {
