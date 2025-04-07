@@ -6,14 +6,14 @@ import (
 
 // HashMap is a thread-safe concurrent hash map implementation
 type HashMap struct {
-	shards     []*mapShard
+	shards     []*hashMapShard
 	shardCount int
 	shardMask  int
 }
 
-// mapShard represents a single shard of the concurrent hash map
-type mapShard struct {
-	items map[string]interface{}
+// hashMapShard represents a single shard of the concurrent hash map
+type hashMapShard struct {
+	items map[string]any
 	mu    sync.RWMutex
 }
 
@@ -26,10 +26,10 @@ func NewHashMap(shardCount int) *HashMap {
 		shardCount = 16
 	}
 
-	shards := make([]*mapShard, shardCount)
+	shards := make([]*hashMapShard, shardCount)
 	for i := 0; i < shardCount; i++ {
-		shards[i] = &mapShard{
-			items: make(map[string]interface{}),
+		shards[i] = &hashMapShard{
+			items: make(map[string]any),
 		}
 	}
 
@@ -41,17 +41,17 @@ func NewHashMap(shardCount int) *HashMap {
 }
 
 // getShard returns the shard for the given key
-func (m *HashMap) getShard(key string) *mapShard {
+func (m *HashMap) getShard(key string) *hashMapShard {
 	// Simple hash function for string keys
 	hash := 0
-	for i := 0; i < len(key); i++ {
-		hash = 31*hash + int(key[i])
+	for _, c := range key {
+		hash = 31*hash + int(c)
 	}
 	return m.shards[hash&m.shardMask]
 }
 
 // Get retrieves a value from the map
-func (m *HashMap) Get(key string) (interface{}, bool) {
+func (m *HashMap) Get(key string) (any, bool) {
 	shard := m.getShard(key)
 	shard.mu.RLock()
 	defer shard.mu.RUnlock()
@@ -61,7 +61,7 @@ func (m *HashMap) Get(key string) (interface{}, bool) {
 }
 
 // Put adds or updates a value in the map
-func (m *HashMap) Put(key string, value interface{}) {
+func (m *HashMap) Put(key string, value any) {
 	shard := m.getShard(key)
 	shard.mu.Lock()
 	defer shard.mu.Unlock()
@@ -91,8 +91,7 @@ func (m *HashMap) Contains(key string) bool {
 // Size returns the total number of items in the map
 func (m *HashMap) Size() int {
 	count := 0
-	for i := 0; i < m.shardCount; i++ {
-		shard := m.shards[i]
+	for _, shard := range m.shards {
 		shard.mu.RLock()
 		count += len(shard.items)
 		shard.mu.RUnlock()
@@ -103,8 +102,7 @@ func (m *HashMap) Size() int {
 // Keys returns all keys in the map
 func (m *HashMap) Keys() []string {
 	keys := make([]string, 0)
-	for i := 0; i < m.shardCount; i++ {
-		shard := m.shards[i]
+	for _, shard := range m.shards {
 		shard.mu.RLock()
 		for k := range shard.items {
 			keys = append(keys, k)
@@ -115,9 +113,8 @@ func (m *HashMap) Keys() []string {
 }
 
 // ForEach executes the provided function for each key-value pair in the map
-func (m *HashMap) ForEach(fn func(key string, value interface{}) bool) {
-	for i := 0; i < m.shardCount; i++ {
-		shard := m.shards[i]
+func (m *HashMap) ForEach(fn func(key string, value any) bool) {
+	for _, shard := range m.shards {
 		shard.mu.RLock()
 		for k, v := range shard.items {
 			if !fn(k, v) {
@@ -131,10 +128,9 @@ func (m *HashMap) ForEach(fn func(key string, value interface{}) bool) {
 
 // Clear removes all items from the map
 func (m *HashMap) Clear() {
-	for i := 0; i < m.shardCount; i++ {
-		shard := m.shards[i]
+	for _, shard := range m.shards {
 		shard.mu.Lock()
-		shard.items = make(map[string]interface{})
+		shard.items = make(map[string]any)
 		shard.mu.Unlock()
 	}
 }

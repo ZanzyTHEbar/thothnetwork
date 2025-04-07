@@ -2,6 +2,7 @@ package actor
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	errbuilder "github.com/ZanzyTHEbar/errbuilder-go"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/device"
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/message"
+	"github.com/ZanzyTHEbar/thothnetwork/pkg/concurrent"
 	"github.com/ZanzyTHEbar/thothnetwork/pkg/logger"
 )
 
@@ -21,6 +23,15 @@ type ActorSystem struct {
 
 	// Passivation manager for resource management
 	passivationManager *PassivationManager
+
+	// Metrics collector
+	metrics *ActorMetrics
+
+	// Actor counts for metrics
+	deviceActors   *concurrent.HashMap
+	twinActors     *concurrent.HashMap
+	roomActors     *concurrent.HashMap
+	pipelineActors *concurrent.HashMap
 }
 
 // Config holds configuration for the actor system
@@ -45,15 +56,43 @@ func NewActorSystem(config Config, log logger.Logger) *ActorSystem {
 	// Create logger
 	logger := log.With("component", "actor_system")
 
-	// Create passivation manager
-	passivationManager := NewPassivationManager(engine, 30*time.Minute, logger)
+	// Create metrics collector
+	metrics := NewActorMetrics(logger)
 
-	return &ActorSystem{
-		engine: engine,
-		config: config,
-		logger: logger,
+	// Create passivation manager
+	passivationManager := NewPassivationManager(engine, PassivationConfig{
+		Timeout:       30 * time.Minute,
+		CheckInterval: 1 * time.Minute,
+		Logger:        logger,
+		BeforePassivation: func(actorID string) error {
+			logger.Info("Preparing to passivate actor", "actor_id", actorID)
+			return nil
+		},
+		AfterPassivation: func(actorID string) {
+			logger.Info("Actor passivation completed", "actor_id", actorID)
+			// Record passivation in metrics
+			// Determine actor type from ID or lookup
+			actorType := "unknown"
+			metrics.RecordActorPassivated(actorType)
+		},
+	})
+
+	system := &ActorSystem{
+		engine:            engine,
+		config:            config,
+		logger:            logger,
 		passivationManager: passivationManager,
+		metrics:           metrics,
+		deviceActors:      concurrent.NewHashMap(16),
+		twinActors:        concurrent.NewHashMap(16),
+		roomActors:        concurrent.NewHashMap(16),
+		pipelineActors:    concurrent.NewHashMap(16),
 	}
+
+	// Start metrics collection
+	metrics.StartMetricsCollection(system)
+
+	return system
 }
 
 // SpawnDevice spawns a new device actor
@@ -75,6 +114,12 @@ func (s *ActorSystem) SpawnDevice(deviceID string) (*actor.PID, error) {
 	// Record activity in passivation manager
 	s.passivationManager.RecordActivity(deviceID)
 
+	// Track the actor for metrics
+	s.deviceActors.Put(deviceID, pid)
+
+	// Record actor started in metrics
+	s.metrics.RecordActorStarted("device")
+
 	return pid, nil
 }
 
@@ -93,6 +138,12 @@ func (s *ActorSystem) SpawnTwin(twinID string, devicePID *actor.PID) (*actor.PID
 
 	// Record activity in passivation manager
 	s.passivationManager.RecordActivity(twinID)
+
+	// Track the actor for metrics
+	s.twinActors.Put(twinID, pid)
+
+	// Record actor started in metrics
+	s.metrics.RecordActorStarted("twin")
 
 	return pid, nil
 }
@@ -113,6 +164,12 @@ func (s *ActorSystem) SpawnRoom(roomID string) (*actor.PID, error) {
 	// Record activity in passivation manager
 	s.passivationManager.RecordActivity(roomID)
 
+	// Track the actor for metrics
+	s.roomActors.Put(roomID, pid)
+
+	// Record actor started in metrics
+	s.metrics.RecordActorStarted("room")
+
 	return pid, nil
 }
 
@@ -132,6 +189,12 @@ func (s *ActorSystem) SpawnPipeline(pipelineID string) (*actor.PID, error) {
 	// Record activity in passivation manager
 	s.passivationManager.RecordActivity(pipelineID)
 
+	// Track the actor for metrics
+	s.pipelineActors.Put(pipelineID, pid)
+
+	// Record actor started in metrics
+	s.metrics.RecordActorStarted("pipeline")
+
 	return pid, nil
 }
 
@@ -145,6 +208,34 @@ func (s *ActorSystem) Stop() {
 	// In the current API, there might be a different way to shut down the engine
 	// For now, we'll just log that we're stopping
 	s.logger.Info("Stopping actor system")
+
+	// Stop the passivation manager
+	s.passivationManager.Stop()
+}
+
+// GetDeviceActorCount returns the number of device actors
+func (s *ActorSystem) GetDeviceActorCount() int {
+	return s.deviceActors.Size()
+}
+
+// GetTwinActorCount returns the number of twin actors
+func (s *ActorSystem) GetTwinActorCount() int {
+	return s.twinActors.Size()
+}
+
+// GetRoomActorCount returns the number of room actors
+func (s *ActorSystem) GetRoomActorCount() int {
+	return s.roomActors.Size()
+}
+
+// GetPipelineActorCount returns the number of pipeline actors
+func (s *ActorSystem) GetPipelineActorCount() int {
+	return s.pipelineActors.Size()
+}
+
+// GetTotalActorCount returns the total number of actors
+func (s *ActorSystem) GetTotalActorCount() int {
+	return s.GetDeviceActorCount() + s.GetTwinActorCount() + s.GetRoomActorCount() + s.GetPipelineActorCount()
 }
 
 // DeviceActor represents a device in the system
@@ -181,7 +272,7 @@ func (a *DeviceActor) Receive(ctx actor.Context) {
 }
 
 // handleStarted handles the actor started event
-func (a *DeviceActor) handleStarted(ctx actor.Context) {
+func (a *DeviceActor) handleStarted(_ actor.Context) {
 	a.logger.Info("Device actor started")
 
 	// Initialize state if not already initialized
@@ -197,7 +288,7 @@ func (a *DeviceActor) handleStarted(ctx actor.Context) {
 }
 
 // handleStopped handles the actor stopped event
-func (a *DeviceActor) handleStopped(ctx actor.Context) {
+func (a *DeviceActor) handleStopped(_ actor.Context) {
 	a.logger.Info("Device actor stopped")
 }
 
@@ -222,7 +313,7 @@ func (a *DeviceActor) handleMessage(ctx actor.Context, msg *message.Message) {
 }
 
 // handleCommandMessage handles command messages
-func (a *DeviceActor) handleCommandMessage(ctx actor.Context, msg *message.Message) {
+func (a *DeviceActor) handleCommandMessage(_ actor.Context, msg *message.Message) {
 	a.logger.Debug("Handling command message", "message_id", msg.ID)
 
 	// Process command and update state
@@ -243,7 +334,7 @@ func (a *DeviceActor) handleCommandMessage(ctx actor.Context, msg *message.Messa
 }
 
 // handleEventMessage handles event messages
-func (a *DeviceActor) handleEventMessage(ctx actor.Context, msg *message.Message) {
+func (a *DeviceActor) handleEventMessage(_ actor.Context, msg *message.Message) {
 	a.logger.Debug("Handling event message", "message_id", msg.ID)
 
 	// Process event and update state
@@ -251,10 +342,10 @@ func (a *DeviceActor) handleEventMessage(ctx actor.Context, msg *message.Message
 }
 
 // handleTelemetryMessage handles telemetry messages
-func (a *DeviceActor) handleTelemetryMessage(ctx actor.Context, msg *message.Message) {
+func (a *DeviceActor) handleTelemetryMessage(_ actor.Context, msg *message.Message) {
 	a.logger.Debug("Handling telemetry message", "message_id", msg.ID)
 
-	// Process telemetry and update state
+	// TODO: Process telemetry and update state
 	// ...
 }
 
@@ -271,7 +362,7 @@ func (a *DeviceActor) handleUpdateState(ctx actor.Context, cmd *UpdateStateComma
 }
 
 // handleGetState handles state queries
-func (a *DeviceActor) handleGetState(ctx actor.Context, query *GetStateQuery) {
+func (a *DeviceActor) handleGetState(ctx actor.Context, _ *GetStateQuery) {
 	a.logger.Debug("Getting device state")
 
 	// Send current state
@@ -309,17 +400,17 @@ func (a *TwinActor) Receive(ctx actor.Context) {
 }
 
 // handleStarted handles the actor started event
-func (a *TwinActor) handleStarted(ctx actor.Context) {
+func (a *TwinActor) handleStarted(_ actor.Context) {
 	a.logger.Info("Twin actor started")
 }
 
 // handleStopped handles the actor stopped event
-func (a *TwinActor) handleStopped(ctx actor.Context) {
+func (a *TwinActor) handleStopped(_ actor.Context) {
 	a.logger.Info("Twin actor stopped")
 }
 
 // handleMessage handles messages sent to the twin
-func (a *TwinActor) handleMessage(ctx actor.Context, msg *message.Message) {
+func (a *TwinActor) handleMessage(_ actor.Context, msg *message.Message) {
 	a.logger.Info("Received message", "message_id", msg.ID, "message_type", msg.Type)
 
 	// Forward message to device actor
@@ -367,12 +458,12 @@ func (a *RoomActor) Receive(ctx actor.Context) {
 }
 
 // handleStarted handles the actor started event
-func (a *RoomActor) handleStarted(ctx actor.Context) {
+func (a *RoomActor) handleStarted(_ actor.Context) {
 	a.logger.Info("Room actor started")
 }
 
 // handleStopped handles the actor stopped event
-func (a *RoomActor) handleStopped(ctx actor.Context) {
+func (a *RoomActor) handleStopped(_ actor.Context) {
 	a.logger.Info("Room actor stopped")
 }
 
@@ -410,7 +501,7 @@ func (a *RoomActor) handleRemoveDevice(ctx actor.Context, cmd *RemoveDeviceComma
 }
 
 // handleGetDevices handles get devices queries
-func (a *RoomActor) handleGetDevices(ctx actor.Context, query *GetDevicesQuery) {
+func (a *RoomActor) handleGetDevices(ctx actor.Context, _ *GetDevicesQuery) {
 	a.logger.Debug("Getting devices in room")
 
 	// Get devices
@@ -460,17 +551,17 @@ func (a *PipelineActor) Receive(ctx actor.Context) {
 }
 
 // handleStarted handles the actor started event
-func (a *PipelineActor) handleStarted(ctx actor.Context) {
+func (a *PipelineActor) handleStarted(_ actor.Context) {
 	a.logger.Info("Pipeline actor started")
 }
 
 // handleStopped handles the actor stopped event
-func (a *PipelineActor) handleStopped(ctx actor.Context) {
+func (a *PipelineActor) handleStopped(_ actor.Context) {
 	a.logger.Info("Pipeline actor stopped")
 }
 
 // handleMessage handles messages sent to the pipeline
-func (a *PipelineActor) handleMessage(ctx actor.Context, msg *message.Message) {
+func (a *PipelineActor) handleMessage(_ actor.Context, msg *message.Message) {
 	a.logger.Info("Received message", "message_id", msg.ID, "message_type", msg.Type)
 
 	// Process message through pipeline stages
@@ -500,7 +591,7 @@ func (a *PipelineActor) handleRemoveStage(ctx actor.Context, cmd *RemoveStageCom
 	for i, stagePID := range a.stages {
 		if stagePID.ID == cmd.StageID {
 			// Remove stage
-			a.stages = append(a.stages[:i], a.stages[i+1:]...)
+			a.stages = slices.Delete(a.stages, i, i+1)
 			break
 		}
 	}
@@ -510,7 +601,7 @@ func (a *PipelineActor) handleRemoveStage(ctx actor.Context, cmd *RemoveStageCom
 }
 
 // handleGetStages handles get stages queries
-func (a *PipelineActor) handleGetStages(ctx actor.Context, query *GetStagesQuery) {
+func (a *PipelineActor) handleGetStages(ctx actor.Context, _ *GetStagesQuery) {
 	a.logger.Debug("Getting stages in pipeline")
 
 	// Get stages
