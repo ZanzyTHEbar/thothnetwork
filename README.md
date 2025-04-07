@@ -1,3 +1,6 @@
+<!-- ![Thoth Network Logo](/docs/thothnetwork.png) -->
+<img src="/docs/thothnetwork.png" alt="Thoth Network Logo" width="200" height="200"></img>
+
 # Thoth Network
 
 > [!IMPORTANT]\

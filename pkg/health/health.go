@@ -48,16 +48,16 @@ type Check struct {
 type CheckFunc func(ctx context.Context) Check
 
 // Checker manages health checks
-type HealthChecker struct {
+type Checker struct {
 	checks map[string]CheckFunc
 	cache  map[string]Check
 	mu     sync.RWMutex
 	logger logger.Logger
 }
 
-// NewHealthChecker creates a new health checker
-func NewHealthChecker(logger logger.Logger) *HealthChecker {
-	return &HealthChecker{
+// NewChecker creates a new health checker
+func NewChecker(logger logger.Logger) *Checker {
+	return &Checker{
 		checks: make(map[string]CheckFunc),
 		cache:  make(map[string]Check),
 		logger: logger.With("component", "health_checker"),
@@ -65,7 +65,7 @@ func NewHealthChecker(logger logger.Logger) *HealthChecker {
 }
 
 // RegisterCheck registers a health check
-func (h *HealthChecker) RegisterCheck(name string, check CheckFunc) {
+func (h *Checker) RegisterCheck(name string, check CheckFunc) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -74,7 +74,7 @@ func (h *HealthChecker) RegisterCheck(name string, check CheckFunc) {
 }
 
 // UnregisterCheck unregisters a health check
-func (h *HealthChecker) UnregisterCheck(name string) {
+func (h *Checker) UnregisterCheck(name string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -84,7 +84,7 @@ func (h *HealthChecker) UnregisterCheck(name string) {
 }
 
 // RunChecks runs all registered health checks
-func (h *HealthChecker) RunChecks(ctx context.Context) map[string]Check {
+func (h *Checker) RunChecks(ctx context.Context) map[string]Check {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -107,7 +107,7 @@ func (h *HealthChecker) RunChecks(ctx context.Context) map[string]Check {
 }
 
 // GetStatus gets the overall status of the system
-func (h *HealthChecker) GetStatus(ctx context.Context) Status {
+func (h *Checker) GetStatus(ctx context.Context) Status {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -149,7 +149,7 @@ func (h *HealthChecker) GetStatus(ctx context.Context) Status {
 }
 
 // GetChecks gets all health checks
-func (h *HealthChecker) GetChecks(ctx context.Context, forceRun bool) map[string]Check {
+func (h *Checker) GetChecks(ctx context.Context, forceRun bool) map[string]Check {
 	if forceRun {
 		return h.RunChecks(ctx)
 	}
@@ -171,7 +171,7 @@ func (h *HealthChecker) GetChecks(ctx context.Context, forceRun bool) map[string
 }
 
 // GetCheck gets a specific health check
-func (h *HealthChecker) GetCheck(ctx context.Context, name string, forceRun bool) (Check, bool) {
+func (h *Checker) GetCheck(ctx context.Context, name string, forceRun bool) (Check, bool) {
 	h.mu.RLock()
 
 	// Check if the check exists
@@ -214,7 +214,7 @@ type HealthResponse struct {
 }
 
 // ServeHTTP serves the health check endpoint
-func (h *HealthChecker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Checker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters
 	query := r.URL.Query()
 	forceRun := query.Get("force") == "true"
@@ -257,7 +257,7 @@ func (h *HealthChecker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // StartServer starts a health check server
-func (h *HealthChecker) StartServer(addr string) (*http.Server, error) {
+func (h *Checker) StartServer(addr string) (*http.Server, error) {
 	mux := http.NewServeMux()
 	mux.Handle("/health", h)
 
@@ -278,7 +278,7 @@ func (h *HealthChecker) StartServer(addr string) (*http.Server, error) {
 }
 
 // StopServer stops the health check server
-func (h *HealthChecker) StopServer(ctx context.Context, server *http.Server) error {
+func (h *Checker) StopServer(ctx context.Context, server *http.Server) error {
 	h.logger.Info("Stopping health check server")
 	return server.Shutdown(ctx)
 }
