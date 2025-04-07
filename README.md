@@ -3,13 +3,13 @@
 > [!IMPORTANT]\
 > This project is currently in active development and is not yet ready for production use.
 
-Thoth Network is a highly scalable, real-time IoT backend system built in Golang, designed to manage and process data from millions of IoT devices. It leverages modern networking technologies such as NATs.io and/or libp2p to provide efficient communication, and it is optimized for concurrency, extensibility, and performance on Linux systems.
+Thoth Network is a highly scalable, real-time IoT backend system built in Golang, designed to manage and process data from millions of IoT devices. It leverages modern networking technologies such as NATs.io and/or libp2p to provide efficient communication. It is optimized for concurrency, extensibility, and performance on Linux systems.
 
 This system was inspired by ROS2, MQTT, and other IoT platforms, but it is designed to be more efficient, scalable, and future-proof.
 
 I originally intended this system to be the backbone of a highly-decentralized cloud-battery-management-system. However, the project has grown to be a more general-purpose IoT backend system.
 
-I had some fun and used it as a decentralized backbone for multi-agent tasks across the internet. Very neat potentials there. 
+I had some fun and used it as a decentralized backbone for multi-agent tasks across the internet. Very neat potentials there.
 
 ## Features
 
@@ -20,7 +20,7 @@ I had some fun and used it as a decentralized backbone for multi-agent tasks acr
 - **Extensibility**: Functions as a library, standalone binary, or containerized service with a CLI and socket interface
 - **Advanced Analytics**: Support for graph-based analytics and integration with big data pipelines and LLMs
 - **Security**: Built-in support for authentication, authorization, and encryption using X.509 certificates & JWT tokens
-  - Potential future implementation of Zero Trust Network  
+  - Potential future implementation of Zero Trust Network
 
 ## Architecture
 

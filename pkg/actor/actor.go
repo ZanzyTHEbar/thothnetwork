@@ -15,7 +15,7 @@ import (
 	"github.com/ZanzyTHEbar/thothnetwork/pkg/logger"
 )
 
-// ActorSystem is a wrapper around the hollywood actor system
+// System is a wrapper around the hollywood actor system
 type ActorSystem struct {
 	engine *actor.Engine
 	config Config

@@ -47,7 +47,7 @@ type Check struct {
 // CheckFunc is a function that performs a health check
 type CheckFunc func(ctx context.Context) Check
 
-// HealthChecker manages health checks
+// Checker manages health checks
 type HealthChecker struct {
 	checks map[string]CheckFunc
 	cache  map[string]Check
@@ -201,7 +201,7 @@ func (h *HealthChecker) GetCheck(ctx context.Context, name string, forceRun bool
 	return result, true
 }
 
-// HealthResponse is the response from the health endpoint
+// Response is the response from the health endpoint
 type HealthResponse struct {
 	// Status is the overall status of the system
 	Status Status `json:"status"`

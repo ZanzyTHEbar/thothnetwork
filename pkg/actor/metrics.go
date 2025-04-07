@@ -4,11 +4,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/ZanzyTHEbar/thothnetwork/pkg/logger"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-// ActorMetrics collects metrics for the actor system
+// Metrics collects metrics for the actor system
 type ActorMetrics struct {
 	// Registry for metrics
 	registry *prometheus.Registry

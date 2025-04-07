@@ -205,14 +205,14 @@ func (a *Adapter) handleListDevices(w http.ResponseWriter, r *http.Request) {
 // handleCreateDevice handles POST /devices
 func (a *Adapter) handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 	// Parse request body
-	var body map[string]interface{}
+	var body map[string]any
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	// Create command payload
-	payload, err := json.Marshal(map[string]interface{}{
+	payload, err := json.Marshal(map[string]any{
 		"command": "create_device",
 		"data":    body,
 	})
@@ -238,7 +238,7 @@ func (a *Adapter) handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 // handleGetDevice handles GET /devices/{id}
 func (a *Adapter) handleGetDevice(w http.ResponseWriter, r *http.Request, deviceID string) {
 	// Create command payload
-	payload, err := json.Marshal(map[string]interface{}{
+	payload, err := json.Marshal(map[string]any{
 		"command":   "get_device",
 		"device_id": deviceID,
 	})
@@ -264,7 +264,7 @@ func (a *Adapter) handleGetDevice(w http.ResponseWriter, r *http.Request, device
 // handleUpdateDevice handles PUT /devices/{id}
 func (a *Adapter) handleUpdateDevice(w http.ResponseWriter, r *http.Request, deviceID string) {
 	// Parse request body
-	var body map[string]interface{}
+	var body map[string]any
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -274,7 +274,7 @@ func (a *Adapter) handleUpdateDevice(w http.ResponseWriter, r *http.Request, dev
 	body["device_id"] = deviceID
 
 	// Create command payload
-	payload, err := json.Marshal(map[string]interface{}{
+	payload, err := json.Marshal(map[string]any{
 		"command": "update_device",
 		"data":    body,
 	})
@@ -300,7 +300,7 @@ func (a *Adapter) handleUpdateDevice(w http.ResponseWriter, r *http.Request, dev
 // handleDeleteDevice handles DELETE /devices/{id}
 func (a *Adapter) handleDeleteDevice(w http.ResponseWriter, r *http.Request, deviceID string) {
 	// Create command payload
-	payload, err := json.Marshal(map[string]interface{}{
+	payload, err := json.Marshal(map[string]any{
 		"command":   "delete_device",
 		"device_id": deviceID,
 	})
@@ -398,7 +398,8 @@ func (a *Adapter) processMessage(w http.ResponseWriter, r *http.Request, msg *me
 	// Handle message in a goroutine
 	go func() {
 		// Create a new context with response channel
-		ctxWithValue := context.WithValue(ctx, "response_channel", respChan)
+		type responseChannelKey struct{}
+		ctxWithValue := context.WithValue(ctx, responseChannelKey{}, respChan)
 
 		// Handle message
 		if err := handler(ctxWithValue, msg); err != nil {
