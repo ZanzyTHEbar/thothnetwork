@@ -1,0 +1,23 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+
+nats:
+  url: nats://nats:4222
+  username: ""
+  password: ""
+  token: ""
+
+libp2p:
+  listen_addresses:
+    - /ip4/0.0.0.0/tcp/9000
+  bootstrap_peers: []
+
+logging:
+  level: info
+  format: json
+
+metrics:
+  enabled: true
+  host: 0.0.0.0
+  port: 9090

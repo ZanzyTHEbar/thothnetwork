@@ -1,0 +1,60 @@
+version: '3'
+
+services:
+  thothnetwork:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: thothnetwork
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    volumes:
+      - ./config.yaml:/etc/thothnetwork/config.yaml
+    depends_on:
+      - nats
+    networks:
+      - thothnetwork-network
+    restart: unless-stopped
+
+  nats:
+    image: nats:latest
+    container_name: thothnetwork-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: -js
+    networks:
+      - thothnetwork-network
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: thothnetwork-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - thothnetwork-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: thothnetwork-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - thothnetwork-network
+    restart: unless-stopped
+
+networks:
+  thothnetwork-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:

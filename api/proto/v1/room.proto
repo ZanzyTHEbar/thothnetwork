@@ -1,0 +1,208 @@
+syntax = "proto3";
+
+package thothnetwork.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ZanzyTHEbar/thothnetwork/gen/proto/v1;thothnetworkv1";
+
+// RoomType represents the type of a room
+enum RoomType {
+  ROOM_TYPE_UNSPECIFIED = 0;
+  ROOM_TYPE_MANY_TO_MANY = 1;
+  ROOM_TYPE_MANY_TO_ONE = 2;
+  ROOM_TYPE_ONE_TO_MANY = 3;
+}
+
+// Room represents a logical grouping of devices
+message Room {
+  // ID is the unique identifier for the room
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Name is the human-readable name of the room
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  
+  // Type is the type of the room
+  RoomType type = 3;
+  
+  // Devices is the list of device IDs in the room
+  repeated string devices = 4;
+  
+  // Metadata is additional information about the room
+  map<string, string> metadata = 5;
+  
+  // CreatedAt is the timestamp when the room was created
+  google.protobuf.Timestamp created_at = 6;
+  
+  // UpdatedAt is the timestamp when the room was last updated
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// CreateRoomRequest is the request for creating a room
+message CreateRoomRequest {
+  // Name is the human-readable name of the room
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Type is the type of the room
+  RoomType type = 2 [(buf.validate.field).enum.defined_only = true];
+  
+  // Devices is the list of device IDs to add to the room
+  repeated string devices = 3;
+  
+  // Metadata is additional information about the room
+  map<string, string> metadata = 4;
+}
+
+// CreateRoomResponse is the response for creating a room
+message CreateRoomResponse {
+  // ID is the unique identifier for the created room
+  string id = 1;
+  
+  // Room is the created room
+  Room room = 2;
+}
+
+// GetRoomRequest is the request for getting a room
+message GetRoomRequest {
+  // ID is the unique identifier for the room
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// GetRoomResponse is the response for getting a room
+message GetRoomResponse {
+  // Room is the requested room
+  Room room = 1;
+}
+
+// UpdateRoomRequest is the request for updating a room
+message UpdateRoomRequest {
+  // ID is the unique identifier for the room
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Name is the human-readable name of the room
+  string name = 2;
+  
+  // Metadata is additional information about the room
+  map<string, string> metadata = 3;
+}
+
+// UpdateRoomResponse is the response for updating a room
+message UpdateRoomResponse {
+  // Room is the updated room
+  Room room = 1;
+}
+
+// DeleteRoomRequest is the request for deleting a room
+message DeleteRoomRequest {
+  // ID is the unique identifier for the room
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// DeleteRoomResponse is the response for deleting a room
+message DeleteRoomResponse {
+  // Success indicates whether the room was successfully deleted
+  bool success = 1;
+}
+
+// ListRoomsRequest is the request for listing rooms
+message ListRoomsRequest {
+  // Types is the list of room types to filter by
+  repeated RoomType types = 1;
+  
+  // DeviceID is the device ID to filter by
+  string device_id = 2;
+  
+  // Metadata is the metadata to filter by
+  map<string, string> metadata = 3;
+}
+
+// ListRoomsResponse is the response for listing rooms
+message ListRoomsResponse {
+  // Rooms is the list of rooms
+  repeated Room rooms = 1;
+}
+
+// AddDeviceToRoomRequest is the request for adding a device to a room
+message AddDeviceToRoomRequest {
+  // RoomID is the ID of the room
+  string room_id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // DeviceID is the ID of the device to add
+  string device_id = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+// AddDeviceToRoomResponse is the response for adding a device to a room
+message AddDeviceToRoomResponse {
+  // Room is the updated room
+  Room room = 1;
+}
+
+// RemoveDeviceFromRoomRequest is the request for removing a device from a room
+message RemoveDeviceFromRoomRequest {
+  // RoomID is the ID of the room
+  string room_id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // DeviceID is the ID of the device to remove
+  string device_id = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+// RemoveDeviceFromRoomResponse is the response for removing a device from a room
+message RemoveDeviceFromRoomResponse {
+  // Room is the updated room
+  Room room = 1;
+}
+
+// ListDevicesInRoomRequest is the request for listing devices in a room
+message ListDevicesInRoomRequest {
+  // RoomID is the ID of the room
+  string room_id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// ListDevicesInRoomResponse is the response for listing devices in a room
+message ListDevicesInRoomResponse {
+  // DeviceIDs is the list of device IDs in the room
+  repeated string device_ids = 1;
+}
+
+// FindRoomsForDeviceRequest is the request for finding rooms for a device
+message FindRoomsForDeviceRequest {
+  // DeviceID is the ID of the device
+  string device_id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// FindRoomsForDeviceResponse is the response for finding rooms for a device
+message FindRoomsForDeviceResponse {
+  // Rooms is the list of rooms containing the device
+  repeated Room rooms = 1;
+}
+
+// RoomService provides room management functionality
+service RoomService {
+  // CreateRoom creates a new room
+  rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse);
+  
+  // GetRoom retrieves a room by ID
+  rpc GetRoom(GetRoomRequest) returns (GetRoomResponse);
+  
+  // UpdateRoom updates an existing room
+  rpc UpdateRoom(UpdateRoomRequest) returns (UpdateRoomResponse);
+  
+  // DeleteRoom deletes a room
+  rpc DeleteRoom(DeleteRoomRequest) returns (DeleteRoomResponse);
+  
+  // ListRooms lists rooms with optional filtering
+  rpc ListRooms(ListRoomsRequest) returns (ListRoomsResponse);
+  
+  // AddDeviceToRoom adds a device to a room
+  rpc AddDeviceToRoom(AddDeviceToRoomRequest) returns (AddDeviceToRoomResponse);
+  
+  // RemoveDeviceFromRoom removes a device from a room
+  rpc RemoveDeviceFromRoom(RemoveDeviceFromRoomRequest) returns (RemoveDeviceFromRoomResponse);
+  
+  // ListDevicesInRoom lists all devices in a room
+  rpc ListDevicesInRoom(ListDevicesInRoomRequest) returns (ListDevicesInRoomResponse);
+  
+  // FindRoomsForDevice finds all rooms that contain a specific device
+  rpc FindRoomsForDevice(FindRoomsForDeviceRequest) returns (FindRoomsForDeviceResponse);
+}

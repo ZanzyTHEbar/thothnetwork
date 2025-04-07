@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package thothnetwork.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ZanzyTHEbar/thothnetwork/gen/proto/v1;thothnetworkv1";
+
+// MessageType represents the type of a message
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  MESSAGE_TYPE_TELEMETRY = 1;
+  MESSAGE_TYPE_COMMAND = 2;
+  MESSAGE_TYPE_EVENT = 3;
+  MESSAGE_TYPE_RESPONSE = 4;
+}
+
+// Message represents a message in the system
+message Message {
+  // ID is the unique identifier for the message
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Source is the source of the message (usually a device ID)
+  string source = 2 [(buf.validate.field).string.min_len = 1];
+  
+  // Target is the target of the message (device ID, room ID, or "*" for broadcast)
+  string target = 3 [(buf.validate.field).string.min_len = 1];
+  
+  // Type is the type of the message
+  MessageType type = 4 [(buf.validate.field).enum.defined_only = true];
+  
+  // Payload is the message payload
+  bytes payload = 5;
+  
+  // ContentType is the MIME type of the payload
+  string content_type = 6;
+  
+  // Timestamp is when the message was created
+  google.protobuf.Timestamp timestamp = 7;
+  
+  // Metadata is additional information about the message
+  map<string, string> metadata = 8;
+}
+
+// PublishMessageRequest is the request for publishing a message
+message PublishMessageRequest {
+  // Source is the source of the message (usually a device ID)
+  string source = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Target is the target of the message (device ID, room ID, or "*" for broadcast)
+  string target = 2 [(buf.validate.field).string.min_len = 1];
+  
+  // Type is the type of the message
+  MessageType type = 3 [(buf.validate.field).enum.defined_only = true];
+  
+  // Payload is the message payload
+  bytes payload = 4;
+  
+  // ContentType is the MIME type of the payload
+  string content_type = 5;
+  
+  // Metadata is additional information about the message
+  map<string, string> metadata = 6;
+  
+  // Topic is the topic to publish the message to
+  string topic = 7 [(buf.validate.field).string.min_len = 1];
+}
+
+// PublishMessageResponse is the response for publishing a message
+message PublishMessageResponse {
+  // ID is the unique identifier for the published message
+  string id = 1;
+  
+  // Message is the published message
+  Message message = 2;
+}
+
+// SubscribeRequest is the request for subscribing to a topic
+message SubscribeRequest {
+  // Topic is the topic to subscribe to
+  string topic = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// SubscribeResponse is the response for subscribing to a topic
+message SubscribeResponse {
+  // Message is the received message
+  Message message = 1;
+}
+
+// UnsubscribeRequest is the request for unsubscribing from a topic
+message UnsubscribeRequest {
+  // Topic is the topic to unsubscribe from
+  string topic = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// UnsubscribeResponse is the response for unsubscribing from a topic
+message UnsubscribeResponse {
+  // Success indicates whether the unsubscription was successful
+  bool success = 1;
+}
+
+// CreateStreamRequest is the request for creating a stream
+message CreateStreamRequest {
+  // Name is the name of the stream
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Subjects is the list of subjects for the stream
+  repeated string subjects = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// CreateStreamResponse is the response for creating a stream
+message CreateStreamResponse {
+  // Success indicates whether the stream was successfully created
+  bool success = 1;
+}
+
+// DeleteStreamRequest is the request for deleting a stream
+message DeleteStreamRequest {
+  // Name is the name of the stream
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// DeleteStreamResponse is the response for deleting a stream
+message DeleteStreamResponse {
+  // Success indicates whether the stream was successfully deleted
+  bool success = 1;
+}
+
+// MessageService provides messaging functionality
+service MessageService {
+  // PublishMessage publishes a message to a topic
+  rpc PublishMessage(PublishMessageRequest) returns (PublishMessageResponse);
+  
+  // Subscribe subscribes to a topic
+  rpc Subscribe(SubscribeRequest) returns (stream SubscribeResponse);
+  
+  // Unsubscribe unsubscribes from a topic
+  rpc Unsubscribe(UnsubscribeRequest) returns (UnsubscribeResponse);
+  
+  // CreateStream creates a new stream
+  rpc CreateStream(CreateStreamRequest) returns (CreateStreamResponse);
+  
+  // DeleteStream deletes a stream
+  rpc DeleteStream(DeleteStreamRequest) returns (DeleteStreamResponse);
+}

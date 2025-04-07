@@ -1,0 +1,190 @@
+syntax = "proto3";
+
+package thothnetwork.v1;
+
+import "buf/validate/validate.proto";
+import "api/proto/v1/message.proto";
+
+option go_package = "github.com/ZanzyTHEbar/thothnetwork/gen/proto/v1;thothnetworkv1";
+
+// ProcessingStage represents a stage in the processing pipeline
+message ProcessingStage {
+  // ID is the unique identifier for the stage
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Name is the name of the stage
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  
+  // Type is the type of the stage
+  string type = 3 [(buf.validate.field).string.min_len = 1];
+  
+  // Config is the configuration for the stage
+  map<string, string> config = 4;
+}
+
+// Pipeline represents a processing pipeline
+message Pipeline {
+  // ID is the unique identifier for the pipeline
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Name is the name of the pipeline
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  
+  // Stages is the list of stages in the pipeline
+  repeated ProcessingStage stages = 3;
+  
+  // InputTopic is the topic to subscribe to for input messages
+  string input_topic = 4 [(buf.validate.field).string.min_len = 1];
+  
+  // OutputTopic is the topic to publish output messages to
+  string output_topic = 5 [(buf.validate.field).string.min_len = 1];
+}
+
+// CreatePipelineRequest is the request for creating a pipeline
+message CreatePipelineRequest {
+  // Name is the name of the pipeline
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Stages is the list of stages in the pipeline
+  repeated ProcessingStage stages = 2;
+  
+  // InputTopic is the topic to subscribe to for input messages
+  string input_topic = 3 [(buf.validate.field).string.min_len = 1];
+  
+  // OutputTopic is the topic to publish output messages to
+  string output_topic = 4 [(buf.validate.field).string.min_len = 1];
+}
+
+// CreatePipelineResponse is the response for creating a pipeline
+message CreatePipelineResponse {
+  // ID is the unique identifier for the created pipeline
+  string id = 1;
+  
+  // Pipeline is the created pipeline
+  Pipeline pipeline = 2;
+}
+
+// GetPipelineRequest is the request for getting a pipeline
+message GetPipelineRequest {
+  // ID is the unique identifier for the pipeline
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// GetPipelineResponse is the response for getting a pipeline
+message GetPipelineResponse {
+  // Pipeline is the requested pipeline
+  Pipeline pipeline = 1;
+}
+
+// UpdatePipelineRequest is the request for updating a pipeline
+message UpdatePipelineRequest {
+  // ID is the unique identifier for the pipeline
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Name is the name of the pipeline
+  string name = 2;
+  
+  // Stages is the list of stages in the pipeline
+  repeated ProcessingStage stages = 3;
+  
+  // InputTopic is the topic to subscribe to for input messages
+  string input_topic = 4;
+  
+  // OutputTopic is the topic to publish output messages to
+  string output_topic = 5;
+}
+
+// UpdatePipelineResponse is the response for updating a pipeline
+message UpdatePipelineResponse {
+  // Pipeline is the updated pipeline
+  Pipeline pipeline = 1;
+}
+
+// DeletePipelineRequest is the request for deleting a pipeline
+message DeletePipelineRequest {
+  // ID is the unique identifier for the pipeline
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// DeletePipelineResponse is the response for deleting a pipeline
+message DeletePipelineResponse {
+  // Success indicates whether the pipeline was successfully deleted
+  bool success = 1;
+}
+
+// ListPipelinesRequest is the request for listing pipelines
+message ListPipelinesRequest {
+  // No parameters needed
+}
+
+// ListPipelinesResponse is the response for listing pipelines
+message ListPipelinesResponse {
+  // Pipelines is the list of pipelines
+  repeated Pipeline pipelines = 1;
+}
+
+// ProcessMessageRequest is the request for processing a message through a pipeline
+message ProcessMessageRequest {
+  // PipelineID is the ID of the pipeline to use
+  string pipeline_id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Message is the message to process
+  Message message = 2;
+}
+
+// ProcessMessageResponse is the response for processing a message through a pipeline
+message ProcessMessageResponse {
+  // Message is the processed message
+  Message message = 1;
+}
+
+// StartPipelineRequest is the request for starting a pipeline
+message StartPipelineRequest {
+  // ID is the unique identifier for the pipeline
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// StartPipelineResponse is the response for starting a pipeline
+message StartPipelineResponse {
+  // Success indicates whether the pipeline was successfully started
+  bool success = 1;
+}
+
+// StopPipelineRequest is the request for stopping a pipeline
+message StopPipelineRequest {
+  // ID is the unique identifier for the pipeline
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// StopPipelineResponse is the response for stopping a pipeline
+message StopPipelineResponse {
+  // Success indicates whether the pipeline was successfully stopped
+  bool success = 1;
+}
+
+// PipelineService provides pipeline management functionality
+service PipelineService {
+  // CreatePipeline creates a new pipeline
+  rpc CreatePipeline(CreatePipelineRequest) returns (CreatePipelineResponse);
+  
+  // GetPipeline retrieves a pipeline by ID
+  rpc GetPipeline(GetPipelineRequest) returns (GetPipelineResponse);
+  
+  // UpdatePipeline updates an existing pipeline
+  rpc UpdatePipeline(UpdatePipelineRequest) returns (UpdatePipelineResponse);
+  
+  // DeletePipeline deletes a pipeline
+  rpc DeletePipeline(DeletePipelineRequest) returns (DeletePipelineResponse);
+  
+  // ListPipelines lists all pipelines
+  rpc ListPipelines(ListPipelinesRequest) returns (ListPipelinesResponse);
+  
+  // ProcessMessage processes a message through a pipeline
+  rpc ProcessMessage(ProcessMessageRequest) returns (ProcessMessageResponse);
+  
+  // StartPipeline starts a pipeline
+  rpc StartPipeline(StartPipelineRequest) returns (StartPipelineResponse);
+  
+  // StopPipeline stops a pipeline
+  rpc StopPipeline(StopPipelineRequest) returns (StopPipelineResponse);
+}

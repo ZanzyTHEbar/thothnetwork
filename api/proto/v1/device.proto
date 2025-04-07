@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package thothnetwork.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ZanzyTHEbar/thothnetwork/gen/proto/v1;thothnetworkv1";
+
+// DeviceStatus represents the status of a device
+enum DeviceStatus {
+  DEVICE_STATUS_UNSPECIFIED = 0;
+  DEVICE_STATUS_ONLINE = 1;
+  DEVICE_STATUS_OFFLINE = 2;
+  DEVICE_STATUS_DISCONNECTED = 3;
+  DEVICE_STATUS_ERROR = 4;
+}
+
+// Device represents an IoT device in the system
+message Device {
+  // ID is the unique identifier for the device
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Name is the human-readable name of the device
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  
+  // Type is the type of the device
+  string type = 3 [(buf.validate.field).string.min_len = 1];
+  
+  // Status is the current status of the device
+  DeviceStatus status = 4;
+  
+  // Metadata is additional information about the device
+  map<string, string> metadata = 5;
+  
+  // LastSeen is the timestamp when the device was last seen
+  google.protobuf.Timestamp last_seen = 6;
+  
+  // CreatedAt is the timestamp when the device was created
+  google.protobuf.Timestamp created_at = 7;
+  
+  // UpdatedAt is the timestamp when the device was last updated
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// RegisterDeviceRequest is the request for registering a device
+message RegisterDeviceRequest {
+  // Name is the human-readable name of the device
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Type is the type of the device
+  string type = 2 [(buf.validate.field).string.min_len = 1];
+  
+  // Metadata is additional information about the device
+  map<string, string> metadata = 3;
+}
+
+// RegisterDeviceResponse is the response for registering a device
+message RegisterDeviceResponse {
+  // ID is the unique identifier for the registered device
+  string id = 1;
+  
+  // Device is the registered device
+  Device device = 2;
+}
+
+// GetDeviceRequest is the request for getting a device
+message GetDeviceRequest {
+  // ID is the unique identifier for the device
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// GetDeviceResponse is the response for getting a device
+message GetDeviceResponse {
+  // Device is the requested device
+  Device device = 1;
+}
+
+// UpdateDeviceRequest is the request for updating a device
+message UpdateDeviceRequest {
+  // ID is the unique identifier for the device
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Name is the human-readable name of the device
+  string name = 2;
+  
+  // Type is the type of the device
+  string type = 3;
+  
+  // Metadata is additional information about the device
+  map<string, string> metadata = 4;
+}
+
+// UpdateDeviceResponse is the response for updating a device
+message UpdateDeviceResponse {
+  // Device is the updated device
+  Device device = 1;
+}
+
+// DeleteDeviceRequest is the request for deleting a device
+message DeleteDeviceRequest {
+  // ID is the unique identifier for the device
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// DeleteDeviceResponse is the response for deleting a device
+message DeleteDeviceResponse {
+  // Success indicates whether the device was successfully deleted
+  bool success = 1;
+}
+
+// ListDevicesRequest is the request for listing devices
+message ListDevicesRequest {
+  // Types is the list of device types to filter by
+  repeated string types = 1;
+  
+  // Statuses is the list of device statuses to filter by
+  repeated DeviceStatus statuses = 2;
+  
+  // Metadata is the metadata to filter by
+  map<string, string> metadata = 3;
+}
+
+// ListDevicesResponse is the response for listing devices
+message ListDevicesResponse {
+  // Devices is the list of devices
+  repeated Device devices = 1;
+}
+
+// DeviceService provides device management functionality
+service DeviceService {
+  // RegisterDevice registers a new device
+  rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
+  
+  // GetDevice retrieves a device by ID
+  rpc GetDevice(GetDeviceRequest) returns (GetDeviceResponse);
+  
+  // UpdateDevice updates an existing device
+  rpc UpdateDevice(UpdateDeviceRequest) returns (UpdateDeviceResponse);
+  
+  // DeleteDevice deletes a device
+  rpc DeleteDevice(DeleteDeviceRequest) returns (DeleteDeviceResponse);
+  
+  // ListDevices lists devices with optional filtering
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse);
+}

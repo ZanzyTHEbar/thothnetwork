@@ -1,0 +1,48 @@
+
+services:
+  web:
+    build: .
+    container_name: go_clean_starter_api
+    ports:
+      - "9090:9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./config.json:/app/config.json
+    environment:
+      - DB_HOST=postgres  # Matches your Go app's expected variable
+      - DB_PORT=5432
+      - DB_USER=user
+      - DB_PASS=password
+      - DB_NAME=go-clean
+    networks:
+      - app_network
+
+  postgres:
+    platform: linux/x86_64
+    image: postgres:13-alpine
+    container_name: go_clean_starter_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./misc/migrations:/docker-entrypoint-initdb.d
+    environment:
+      - DB_NAME=go-clean
+      - DB_USER=user
+      - DB_PASS=password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d go-clean"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+    driver: bridge

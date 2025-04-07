@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package thothnetwork.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/ZanzyTHEbar/thothnetwork/gen/proto/v1;thothnetworkv1";
+
+// DigitalTwin represents a virtual representation of a device
+message DigitalTwin {
+  // DeviceID is the ID of the device this twin represents
+  string device_id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // State is the current state of the device
+  google.protobuf.Struct state = 2;
+  
+  // Desired is the desired state of the device
+  google.protobuf.Struct desired = 3;
+  
+  // Version is the version of the twin
+  int64 version = 4;
+  
+  // LastUpdated is the timestamp when the twin was last updated
+  google.protobuf.Timestamp last_updated = 5;
+  
+  // Metadata is additional information about the twin
+  google.protobuf.Struct metadata = 6;
+}
+
+// GetTwinRequest is the request for getting a digital twin
+message GetTwinRequest {
+  // DeviceID is the ID of the device
+  string device_id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// GetTwinResponse is the response for getting a digital twin
+message GetTwinResponse {
+  // Twin is the requested digital twin
+  DigitalTwin twin = 1;
+}
+
+// UpdateTwinStateRequest is the request for updating a twin's state
+message UpdateTwinStateRequest {
+  // DeviceID is the ID of the device
+  string device_id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // State is the new state of the device
+  google.protobuf.Struct state = 2;
+}
+
+// UpdateTwinStateResponse is the response for updating a twin's state
+message UpdateTwinStateResponse {
+  // Twin is the updated digital twin
+  DigitalTwin twin = 1;
+}
+
+// UpdateTwinDesiredRequest is the request for updating a twin's desired state
+message UpdateTwinDesiredRequest {
+  // DeviceID is the ID of the device
+  string device_id = 1 [(buf.validate.field).string.min_len = 1];
+  
+  // Desired is the new desired state of the device
+  google.protobuf.Struct desired = 2;
+}
+
+// UpdateTwinDesiredResponse is the response for updating a twin's desired state
+message UpdateTwinDesiredResponse {
+  // Twin is the updated digital twin
+  DigitalTwin twin = 1;
+  
+  // Delta is the difference between desired and current state
+  google.protobuf.Struct delta = 2;
+}
+
+// DeleteTwinRequest is the request for deleting a digital twin
+message DeleteTwinRequest {
+  // DeviceID is the ID of the device
+  string device_id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// DeleteTwinResponse is the response for deleting a digital twin
+message DeleteTwinResponse {
+  // Success indicates whether the twin was successfully deleted
+  bool success = 1;
+}
+
+// TwinService provides digital twin management functionality
+service TwinService {
+  // GetTwin retrieves a digital twin by device ID
+  rpc GetTwin(GetTwinRequest) returns (GetTwinResponse);
+  
+  // UpdateTwinState updates the state of a digital twin
+  rpc UpdateTwinState(UpdateTwinStateRequest) returns (UpdateTwinStateResponse);
+  
+  // UpdateTwinDesired updates the desired state of a digital twin
+  rpc UpdateTwinDesired(UpdateTwinDesiredRequest) returns (UpdateTwinDesiredResponse);
+  
+  // DeleteTwin deletes a digital twin
+  rpc DeleteTwin(DeleteTwinRequest) returns (DeleteTwinResponse);
+}
