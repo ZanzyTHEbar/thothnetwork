@@ -3,6 +3,7 @@ package actor
 import (
 	"context"
 	"fmt"
+	"time"
 
 	errbuilder "github.com/ZanzyTHEbar/errbuilder-go"
 	"github.com/anthdm/hollywood/actor"
@@ -12,6 +13,8 @@ import (
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/room"
 	"github.com/ZanzyTHEbar/thothnetwork/internal/ports/repositories"
 	actorpkg "github.com/ZanzyTHEbar/thothnetwork/pkg/actor"
+	"github.com/ZanzyTHEbar/thothnetwork/pkg/circuitbreaker"
+	"github.com/ZanzyTHEbar/thothnetwork/pkg/concurrent"
 	"github.com/ZanzyTHEbar/thothnetwork/pkg/logger"
 )
 
@@ -20,9 +23,13 @@ type Service struct {
 	actorSystem  *actorpkg.ActorSystem
 	deviceRepo   repositories.DeviceRepository
 	roomRepo     repositories.RoomRepository
-	deviceActors map[string]*actor.PID
-	roomActors   map[string]*actor.PID
+	deviceActors *concurrent.HashMap
+	roomActors   *concurrent.HashMap
 	logger       logger.Logger
+
+	// Circuit breakers for external dependencies
+	deviceRepoCircuitBreaker *circuitbreaker.CircuitBreaker
+	roomRepoCircuitBreaker   *circuitbreaker.CircuitBreaker
 }
 
 // NewService creates a new actor service
@@ -32,20 +39,46 @@ func NewService(
 	roomRepo repositories.RoomRepository,
 	logger logger.Logger,
 ) *Service {
+	// Create logger
+	serviceLogger := logger.With("service", "actor")
+
+	// Create circuit breakers
+	deviceRepoCircuitBreaker := circuitbreaker.NewCircuitBreaker(circuitbreaker.Config{
+		Name:             "device_repository",
+		FailureThreshold: 5,
+		ResetTimeout:     30 * time.Second,
+		Logger:           serviceLogger,
+	})
+
+	roomRepoCircuitBreaker := circuitbreaker.NewCircuitBreaker(circuitbreaker.Config{
+		Name:             "room_repository",
+		FailureThreshold: 5,
+		ResetTimeout:     30 * time.Second,
+		Logger:           serviceLogger,
+	})
+
 	return &Service{
-		actorSystem:  actorSystem,
-		deviceRepo:   deviceRepo,
-		roomRepo:     roomRepo,
-		deviceActors: make(map[string]*actor.PID),
-		roomActors:   make(map[string]*actor.PID),
-		logger:       logger.With("service", "actor"),
+		actorSystem:             actorSystem,
+		deviceRepo:              deviceRepo,
+		roomRepo:                roomRepo,
+		deviceActors:            concurrent.NewHashMap(16),
+		roomActors:              concurrent.NewHashMap(16),
+		logger:                  serviceLogger,
+		deviceRepoCircuitBreaker: deviceRepoCircuitBreaker,
+		roomRepoCircuitBreaker:   roomRepoCircuitBreaker,
 	}
 }
 
 // StartDeviceActor starts an actor for a device
 func (s *Service) StartDeviceActor(ctx context.Context, deviceID string) error {
-	// Check if device exists
-	dev, err := s.deviceRepo.Get(ctx, deviceID)
+	// Check if device exists with circuit breaker
+	var dev *device.Device
+	err := s.deviceRepoCircuitBreaker.Execute(func() error {
+		var repoErr error
+		dev, repoErr = s.deviceRepo.Get(ctx, deviceID)
+		return repoErr
+	})
+
 	if err != nil {
 		return errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Failed to get device: %s", err.Error())).
@@ -54,7 +87,7 @@ func (s *Service) StartDeviceActor(ctx context.Context, deviceID string) error {
 	}
 
 	// Check if actor already exists
-	if _, exists := s.deviceActors[deviceID]; exists {
+	if _, exists := s.deviceActors.Get(deviceID); exists {
 		return errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Actor for device %s already exists", deviceID)).
 			WithCode(errbuilder.CodeAlreadyExists)
@@ -70,13 +103,13 @@ func (s *Service) StartDeviceActor(ctx context.Context, deviceID string) error {
 	}
 
 	// Store actor reference
-	s.deviceActors[deviceID] = pid
+	s.deviceActors.Put(deviceID, pid)
 
 	// Update device state
 	s.logger.Info("Updating device actor state", "device_id", deviceID)
 	_, err = s.actorSystem.Engine().Request(pid, &actorpkg.UpdateStateCommand{
 		State: dev,
-	}, nil)
+	}, 5*time.Second).Result()
 	if err != nil {
 		return errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Failed to update device actor state: %s", err.Error())).
@@ -90,26 +123,33 @@ func (s *Service) StartDeviceActor(ctx context.Context, deviceID string) error {
 // StopDeviceActor stops an actor for a device
 func (s *Service) StopDeviceActor(ctx context.Context, deviceID string) error {
 	// Check if actor exists
-	pid, exists := s.deviceActors[deviceID]
+	val, exists := s.deviceActors.Get(deviceID)
 	if !exists {
 		return errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Actor for device %s not found", deviceID)).
 			WithCode(errbuilder.CodeNotFound)
 	}
+	pid := val.(*actor.PID)
 
 	// Stop actor
 	s.actorSystem.Engine().Stop(pid)
 
 	// Remove actor reference
-	delete(s.deviceActors, deviceID)
+	s.deviceActors.Remove(deviceID)
 
 	return nil
 }
 
 // StartRoomActor starts an actor for a room
 func (s *Service) StartRoomActor(ctx context.Context, roomID string) error {
-	// Check if room exists
-	rm, err := s.roomRepo.Get(ctx, roomID)
+	// Check if room exists with circuit breaker
+	var rm *room.Room
+	err := s.roomRepoCircuitBreaker.Execute(func() error {
+		var repoErr error
+		rm, repoErr = s.roomRepo.Get(ctx, roomID)
+		return repoErr
+	})
+
 	if err != nil {
 		return errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Failed to get room: %s", err.Error())).
@@ -118,7 +158,7 @@ func (s *Service) StartRoomActor(ctx context.Context, roomID string) error {
 	}
 
 	// Check if actor already exists
-	if _, exists := s.roomActors[roomID]; exists {
+	if _, exists := s.roomActors.Get(roomID); exists {
 		return errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Actor for room %s already exists", roomID)).
 			WithCode(errbuilder.CodeAlreadyExists)
@@ -134,12 +174,12 @@ func (s *Service) StartRoomActor(ctx context.Context, roomID string) error {
 	}
 
 	// Store actor reference
-	s.roomActors[roomID] = pid
+	s.roomActors.Put(roomID, pid)
 
 	// Add devices to room
 	for _, deviceID := range rm.Devices {
 		// Get device actor
-		devicePID, exists := s.deviceActors[deviceID]
+		val, exists := s.deviceActors.Get(deviceID)
 		if !exists {
 			// Start device actor if it doesn't exist
 			err := s.StartDeviceActor(ctx, deviceID)
@@ -147,15 +187,16 @@ func (s *Service) StartRoomActor(ctx context.Context, roomID string) error {
 				s.logger.Warn("Failed to start device actor", "device_id", deviceID, "error", err)
 				continue
 			}
-			devicePID = s.deviceActors[deviceID]
+			val, _ = s.deviceActors.Get(deviceID)
 		}
+		devicePID := val.(*actor.PID)
 
 		// Add device to room
 		s.logger.Info("Adding device to room actor", "device_id", deviceID, "room_id", roomID)
 		_, err := s.actorSystem.Engine().Request(pid, &actorpkg.AddDeviceCommand{
 			DeviceID:  deviceID,
 			DevicePID: devicePID,
-		}, nil)
+		}, 5*time.Second).Result()
 		if err != nil {
 			s.logger.Warn("Failed to add device to room actor", "device_id", deviceID, "room_id", roomID, "error", err)
 		}
@@ -167,18 +208,19 @@ func (s *Service) StartRoomActor(ctx context.Context, roomID string) error {
 // StopRoomActor stops an actor for a room
 func (s *Service) StopRoomActor(ctx context.Context, roomID string) error {
 	// Check if actor exists
-	pid, exists := s.roomActors[roomID]
+	val, exists := s.roomActors.Get(roomID)
 	if !exists {
 		return errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Actor for room %s not found", roomID)).
 			WithCode(errbuilder.CodeNotFound)
 	}
+	pid := val.(*actor.PID)
 
 	// Stop actor
 	s.actorSystem.Engine().Stop(pid)
 
 	// Remove actor reference
-	delete(s.roomActors, roomID)
+	s.roomActors.Remove(roomID)
 
 	return nil
 }
@@ -186,7 +228,7 @@ func (s *Service) StopRoomActor(ctx context.Context, roomID string) error {
 // SendMessageToDevice sends a message to a device actor
 func (s *Service) SendMessageToDevice(ctx context.Context, deviceID string, msg *message.Message) error {
 	// Check if actor exists
-	pid, exists := s.deviceActors[deviceID]
+	val, exists := s.deviceActors.Get(deviceID)
 	if !exists {
 		// Try to start device actor
 		err := s.StartDeviceActor(ctx, deviceID)
@@ -196,8 +238,9 @@ func (s *Service) SendMessageToDevice(ctx context.Context, deviceID string, msg 
 				WithCode(errbuilder.CodeNotFound).
 				WithCause(err)
 		}
-		pid = s.deviceActors[deviceID]
+		val, _ = s.deviceActors.Get(deviceID)
 	}
+	pid := val.(*actor.PID)
 
 	// Send message to device actor
 	s.actorSystem.Engine().Send(pid, msg)
@@ -208,7 +251,7 @@ func (s *Service) SendMessageToDevice(ctx context.Context, deviceID string, msg 
 // SendMessageToRoom sends a message to a room actor
 func (s *Service) SendMessageToRoom(ctx context.Context, roomID string, msg *message.Message) error {
 	// Check if actor exists
-	pid, exists := s.roomActors[roomID]
+	val, exists := s.roomActors.Get(roomID)
 	if !exists {
 		// Try to start room actor
 		err := s.StartRoomActor(ctx, roomID)
@@ -218,8 +261,9 @@ func (s *Service) SendMessageToRoom(ctx context.Context, roomID string, msg *mes
 				WithCode(errbuilder.CodeNotFound).
 				WithCause(err)
 		}
-		pid = s.roomActors[roomID]
+		val, _ = s.roomActors.Get(roomID)
 	}
+	pid := val.(*actor.PID)
 
 	// Send message to room actor
 	s.actorSystem.Engine().Send(pid, msg)
@@ -230,7 +274,7 @@ func (s *Service) SendMessageToRoom(ctx context.Context, roomID string, msg *mes
 // GetDeviceState gets the state of a device actor
 func (s *Service) GetDeviceState(ctx context.Context, deviceID string) (*device.Device, error) {
 	// Check if actor exists
-	pid, exists := s.deviceActors[deviceID]
+	val, exists := s.deviceActors.Get(deviceID)
 	if !exists {
 		// Try to start device actor
 		err := s.StartDeviceActor(ctx, deviceID)
@@ -240,11 +284,12 @@ func (s *Service) GetDeviceState(ctx context.Context, deviceID string) (*device.
 				WithCode(errbuilder.CodeNotFound).
 				WithCause(err)
 		}
-		pid = s.deviceActors[deviceID]
+		val, _ = s.deviceActors.Get(deviceID)
 	}
+	pid := val.(*actor.PID)
 
 	// Get device state
-	resp, err := s.actorSystem.Engine().Request(pid, &actorpkg.GetStateQuery{}, nil)
+	response, err := s.actorSystem.Engine().Request(pid, &actorpkg.GetStateQuery{}, 5*time.Second).Result()
 	if err != nil {
 		return nil, errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Failed to get device state: %s", err.Error())).
@@ -253,7 +298,7 @@ func (s *Service) GetDeviceState(ctx context.Context, deviceID string) (*device.
 	}
 
 	// Convert response to device state
-	stateResp, ok := resp.(*actorpkg.GetStateResponse)
+	stateResp, ok := response.(*actorpkg.GetStateResponse)
 	if !ok {
 		return nil, errbuilder.NewErrBuilder().
 			WithMsg("Invalid response type").
@@ -266,7 +311,7 @@ func (s *Service) GetDeviceState(ctx context.Context, deviceID string) (*device.
 // GetRoomDevices gets the devices in a room actor
 func (s *Service) GetRoomDevices(ctx context.Context, roomID string) ([]string, error) {
 	// Check if actor exists
-	pid, exists := s.roomActors[roomID]
+	val, exists := s.roomActors.Get(roomID)
 	if !exists {
 		// Try to start room actor
 		err := s.StartRoomActor(ctx, roomID)
@@ -276,11 +321,12 @@ func (s *Service) GetRoomDevices(ctx context.Context, roomID string) ([]string, 
 				WithCode(errbuilder.CodeNotFound).
 				WithCause(err)
 		}
-		pid = s.roomActors[roomID]
+		val, _ = s.roomActors.Get(roomID)
 	}
+	pid := val.(*actor.PID)
 
 	// Get room devices
-	resp, err := s.actorSystem.Engine().Request(pid, &actorpkg.GetDevicesQuery{}, nil)
+	response, err := s.actorSystem.Engine().Request(pid, &actorpkg.GetDevicesQuery{}, 5*time.Second).Result()
 	if err != nil {
 		return nil, errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Failed to get room devices: %s", err.Error())).
@@ -289,7 +335,7 @@ func (s *Service) GetRoomDevices(ctx context.Context, roomID string) ([]string, 
 	}
 
 	// Convert response to device IDs
-	devicesResp, ok := resp.(*actorpkg.GetDevicesResponse)
+	devicesResp, ok := response.(*actorpkg.GetDevicesResponse)
 	if !ok {
 		return nil, errbuilder.NewErrBuilder().
 			WithMsg("Invalid response type").
@@ -302,8 +348,8 @@ func (s *Service) GetRoomDevices(ctx context.Context, roomID string) ([]string, 
 // AddDeviceToRoom adds a device to a room actor
 func (s *Service) AddDeviceToRoom(ctx context.Context, roomID, deviceID string) error {
 	// Check if room actor exists
-	roomPID, exists := s.roomActors[roomID]
-	if !exists {
+	roomVal, roomExists := s.roomActors.Get(roomID)
+	if !roomExists {
 		// Try to start room actor
 		err := s.StartRoomActor(ctx, roomID)
 		if err != nil {
@@ -312,12 +358,13 @@ func (s *Service) AddDeviceToRoom(ctx context.Context, roomID, deviceID string) 
 				WithCode(errbuilder.CodeNotFound).
 				WithCause(err)
 		}
-		roomPID = s.roomActors[roomID]
+		roomVal, _ = s.roomActors.Get(roomID)
 	}
+	roomPID := roomVal.(*actor.PID)
 
 	// Check if device actor exists
-	devicePID, exists := s.deviceActors[deviceID]
-	if !exists {
+	deviceVal, deviceExists := s.deviceActors.Get(deviceID)
+	if !deviceExists {
 		// Try to start device actor
 		err := s.StartDeviceActor(ctx, deviceID)
 		if err != nil {
@@ -326,8 +373,9 @@ func (s *Service) AddDeviceToRoom(ctx context.Context, roomID, deviceID string) 
 				WithCode(errbuilder.CodeNotFound).
 				WithCause(err)
 		}
-		devicePID = s.deviceActors[deviceID]
+		deviceVal, _ = s.deviceActors.Get(deviceID)
 	}
+	devicePID := deviceVal.(*actor.PID)
 
 	// Add device to room in repository
 	err := s.roomRepo.AddDevice(ctx, roomID, deviceID)
@@ -342,7 +390,7 @@ func (s *Service) AddDeviceToRoom(ctx context.Context, roomID, deviceID string) 
 	_, err = s.actorSystem.Engine().Request(roomPID, &actorpkg.AddDeviceCommand{
 		DeviceID:  deviceID,
 		DevicePID: devicePID,
-	}, nil)
+	}, 5*time.Second).Result()
 	if err != nil {
 		return errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Failed to add device to room actor: %s", err.Error())).
@@ -356,8 +404,8 @@ func (s *Service) AddDeviceToRoom(ctx context.Context, roomID, deviceID string) 
 // RemoveDeviceFromRoom removes a device from a room actor
 func (s *Service) RemoveDeviceFromRoom(ctx context.Context, roomID, deviceID string) error {
 	// Check if room actor exists
-	roomPID, exists := s.roomActors[roomID]
-	if !exists {
+	roomVal, roomExists := s.roomActors.Get(roomID)
+	if !roomExists {
 		// Try to start room actor
 		err := s.StartRoomActor(ctx, roomID)
 		if err != nil {
@@ -366,8 +414,9 @@ func (s *Service) RemoveDeviceFromRoom(ctx context.Context, roomID, deviceID str
 				WithCode(errbuilder.CodeNotFound).
 				WithCause(err)
 		}
-		roomPID = s.roomActors[roomID]
+		roomVal, _ = s.roomActors.Get(roomID)
 	}
+	roomPID := roomVal.(*actor.PID)
 
 	// Remove device from room in repository
 	err := s.roomRepo.RemoveDevice(ctx, roomID, deviceID)
@@ -381,7 +430,7 @@ func (s *Service) RemoveDeviceFromRoom(ctx context.Context, roomID, deviceID str
 	// Remove device from room actor
 	_, err = s.actorSystem.Engine().Request(roomPID, &actorpkg.RemoveDeviceCommand{
 		DeviceID: deviceID,
-	}, nil)
+	}, 5*time.Second).Result()
 	if err != nil {
 		return errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Failed to remove device from room actor: %s", err.Error())).
@@ -439,16 +488,20 @@ func (s *Service) StartAllRoomActors(ctx context.Context) error {
 // StopAllActors stops all actors
 func (s *Service) StopAllActors() {
 	// Stop all device actors
-	for deviceID, pid := range s.deviceActors {
+	s.deviceActors.ForEach(func(deviceID string, val interface{}) bool {
+		pid := val.(*actor.PID)
 		s.logger.Info("Stopping device actor", "device_id", deviceID)
 		s.actorSystem.Engine().Stop(pid)
-	}
-	s.deviceActors = make(map[string]*actor.PID)
+		return true
+	})
+	s.deviceActors = concurrent.NewHashMap(16)
 
 	// Stop all room actors
-	for roomID, pid := range s.roomActors {
+	s.roomActors.ForEach(func(roomID string, val interface{}) bool {
+		pid := val.(*actor.PID)
 		s.logger.Info("Stopping room actor", "room_id", roomID)
 		s.actorSystem.Engine().Stop(pid)
-	}
-	s.roomActors = make(map[string]*actor.PID)
+		return true
+	})
+	s.roomActors = concurrent.NewHashMap(16)
 }

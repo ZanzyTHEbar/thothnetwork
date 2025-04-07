@@ -1,6 +1,7 @@
 package room
 
 import (
+	"slices"
 	"time"
 )
 
@@ -30,6 +31,9 @@ type Room struct {
 	// Devices is the list of device IDs in the room
 	Devices []string `json:"devices"`
 
+	// deviceMap is a map of device IDs for O(1) lookups (not serialized)
+	deviceMap map[string]struct{} `json:"-"`
+
 	// Metadata is additional information about the room
 	Metadata map[string]string `json:"metadata"`
 
@@ -48,6 +52,7 @@ func NewRoom(id, name string, roomType Type) *Room {
 		Name:      name,
 		Type:      roomType,
 		Devices:   make([]string, 0),
+		deviceMap: make(map[string]struct{}),
 		Metadata:  make(map[string]string),
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -56,31 +61,55 @@ func NewRoom(id, name string, roomType Type) *Room {
 
 // AddDevice adds a device to the room
 func (r *Room) AddDevice(deviceID string) bool {
-	// Check if device is already in the room
-	// TODO: Optimize this
-	for _, id := range r.Devices {
-		if id == deviceID {
-			return false
+	// Initialize deviceMap if nil
+	if r.deviceMap == nil {
+		r.deviceMap = make(map[string]struct{})
+		for _, id := range r.Devices {
+			r.deviceMap[id] = struct{}{}
 		}
+	}
+
+	// Check if device is already in the room using O(1) lookup
+	if _, exists := r.deviceMap[deviceID]; exists {
+		return false
 	}
 
 	// Add device to the room
 	r.Devices = append(r.Devices, deviceID)
+	r.deviceMap[deviceID] = struct{}{}
 	r.UpdatedAt = time.Now()
 	return true
 }
 
 // RemoveDevice removes a device from the room
 func (r *Room) RemoveDevice(deviceID string) bool {
-	// TODO: Optimize this
+	// Initialize deviceMap if nil
+	if r.deviceMap == nil {
+		r.deviceMap = make(map[string]struct{})
+		for _, id := range r.Devices {
+			r.deviceMap[id] = struct{}{}
+		}
+	}
+
+	// Check if device exists in the room
+	if _, exists := r.deviceMap[deviceID]; !exists {
+		return false
+	}
+
+	// Remove device from the map
+	delete(r.deviceMap, deviceID)
+
+	// Remove device from the slice
 	for i, id := range r.Devices {
 		if id == deviceID {
-			// Remove device from the room
-			r.Devices = append(r.Devices[:i], r.Devices[i+1:]...)
+			// Remove device from the room using slices.Delete
+			r.Devices = slices.Delete(r.Devices, i, i+1)
 			r.UpdatedAt = time.Now()
 			return true
 		}
 	}
+
+	// This should never happen if deviceMap is in sync with Devices
 	return false
 }
 
@@ -91,4 +120,18 @@ func (r *Room) SetMetadata(key, value string) {
 	}
 	r.Metadata[key] = value
 	r.UpdatedAt = time.Now()
+}
+
+// ContainsDevice checks if a device is in the room using O(1) lookup
+func (r *Room) ContainsDevice(deviceID string) bool {
+	// Initialize deviceMap if nil
+	if r.deviceMap == nil {
+		r.deviceMap = make(map[string]struct{})
+		for _, id := range r.Devices {
+			r.deviceMap[id] = struct{}{}
+		}
+	}
+
+	_, exists := r.deviceMap[deviceID]
+	return exists
 }

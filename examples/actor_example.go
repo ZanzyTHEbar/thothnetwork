@@ -2,17 +2,15 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/ZanzyTHEbar/thothnetwork/internal/adapters/repositories/memory"
-	actorservice "github.com/ZanzyTHEbar/thothnetwork/internal/services/actor"
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/device"
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/message"
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/room"
+	actorservice "github.com/ZanzyTHEbar/thothnetwork/internal/services/actor"
 	"github.com/ZanzyTHEbar/thothnetwork/pkg/actor"
 	"github.com/ZanzyTHEbar/thothnetwork/pkg/logger"
 	"github.com/google/uuid"
@@ -20,7 +18,15 @@ import (
 
 func main() {
 	// Create logger
-	log := logger.NewZapLogger("debug")
+	loggerConfig := logger.Config{
+		Level:  "debug",
+		Format: "json",
+		Output: "stdout",
+	}
+	log, err := logger.NewLogger(loggerConfig)
+	if err != nil {
+		panic(err)
+	}
 	log.Info("Starting actor example")
 
 	// Create repositories
@@ -55,7 +61,7 @@ func main() {
 	device2.Metadata["location"] = "kitchen"
 
 	// Register devices
-	err := deviceRepo.Register(ctx, device1)
+	err = deviceRepo.Register(ctx, device1)
 	if err != nil {
 		log.Error("Failed to register device", "error", err)
 		os.Exit(1)
