@@ -3,10 +3,12 @@ package main
 import (
 	"os"
 
-	"github.com/ZanzyTHEbar/thothnetwork/cmd/cli/commands"
+	"github.com/ZanzyTHEbar/thothnetwork/cmd/client/commands"
 	"github.com/ZanzyTHEbar/thothnetwork/pkg/logger"
 	"github.com/spf13/cobra"
 )
+
+// TODO: Add command to spawn development server, attached and detached modes
 
 var rootCmd = &cobra.Command{
 	Use:   "thothnetwork",

@@ -11,6 +11,8 @@ import (
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/device"
 )
 
+// TODO: Implement charmbraclet packages and lipgloss for TUI
+
 // NewDeviceCommand creates a new device command
 func NewDeviceCommand() *cobra.Command {
 	cmd := &cobra.Command{

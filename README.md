@@ -33,6 +33,22 @@ Thoth Network employs a **Hexagonal Architecture** (Ports and Adapters pattern) 
 - **Ports**: Define standardized interfaces for interacting with external systems
 - **Adapters**: Implement the ports for specific technologies or protocols
 
+### Project Structure
+
+- **cmd/**: Contains the main entry points for the application
+  - **cmd/server/**: The server application that runs the Thoth Network backend
+  - **cmd/client/**: Command-line interface for interacting with the Thoth Network server
+- **internal/**: Internal packages not meant for external use
+  - **internal/server/**: The main server implementation
+  - **internal/config/**: Configuration handling
+  - **internal/core/**: Core domain models and business logic
+  - **internal/ports/**: Interface definitions for external systems
+  - **internal/adapters/**: Implementations of the port interfaces
+  - **internal/services/**: Business logic services
+- **pkg/**: Reusable packages that can be used by external applications
+- **api/**: API definitions (Protocol Buffers, OpenAPI, etc.)
+- **docs/**: Documentation
+
 ## Getting Started
 
 ### Prerequisites
@@ -56,7 +72,7 @@ cd thothnetwork
 go build -o thothnetwork-server cmd/server
 
 # Build the CLI
-go build -o thothnetwork-cli cmd/cli
+go build -o thothnetwork-client cmd/client
 ```
 
 ### Configuration
@@ -94,23 +110,23 @@ metrics:
 thothnetwork-server --config config.yaml
 ```
 
-### Using the CLI
+### Using the Client
 
 ```bash
 # List devices
-thothnetwork-cli device list
+thothnetwork-client device list
 
 # Create a device
-thothnetwork-cli device create --name "Temperature Sensor" --type "sensor" --metadata '{"location":"room-1"}'
+thothnetwork-client device create --name "Temperature Sensor" --type "sensor" --metadata '{"location":"room-1"}'
 
 # Get device details
-thothnetwork-cli device get device-123
+thothnetwork-client device get device-123
 
 # Update a device
-thothnetwork-cli device update device-123 --name "Updated Sensor"
+thothnetwork-client device update device-123 --name "Updated Sensor"
 
 # Delete a device
-thothnetwork-cli device delete device-123
+thothnetwork-client device delete device-123
 ```
 
 ## License
