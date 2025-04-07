@@ -80,34 +80,34 @@ type StackFrame struct {
 type Error struct {
 	// Message is the error message
 	Message string `json:"message"`
-	
+
 	// Code is the error code
-	Code errbuilder.Code `json:"code"`
-	
+	Code errbuilder.ErrCode `json:"code"`
+
 	// Category is the error category
 	Category ErrorCategory `json:"category"`
-	
+
 	// Severity is the error severity
 	Severity ErrorSeverity `json:"severity"`
-	
+
 	// RetryStrategy is the retry strategy
 	RetryStrategy ErrorRetryStrategy `json:"retry_strategy"`
-	
+
 	// RetryDelay is the delay between retries
 	RetryDelay time.Duration `json:"retry_delay"`
-	
+
 	// MaxRetries is the maximum number of retries
 	MaxRetries int `json:"max_retries"`
-	
+
 	// Metadata is additional information about the error
-	Metadata map[string]interface{} `json:"metadata"`
-	
+	Metadata map[string]any `json:"metadata"`
+
 	// Cause is the underlying error
 	Cause error `json:"cause"`
-	
+
 	// Stack is the stack trace
 	Stack []StackFrame `json:"stack"`
-	
+
 	// Timestamp is the time the error occurred
 	Timestamp time.Time `json:"timestamp"`
 }
@@ -132,9 +132,9 @@ func (e *Error) WithCause(cause error) *Error {
 }
 
 // WithMetadata adds metadata to the error
-func (e *Error) WithMetadata(key string, value interface{}) *Error {
+func (e *Error) WithMetadata(key string, value any) *Error {
 	if e.Metadata == nil {
-		e.Metadata = make(map[string]interface{})
+		e.Metadata = make(map[string]any)
 	}
 	e.Metadata[key] = value
 	return e
@@ -184,7 +184,7 @@ func Wrap(err error, message string) *Error {
 	if err == nil {
 		return nil
 	}
-	
+
 	// If the error is already a *Error, just update the message
 	if e, ok := err.(*Error); ok {
 		return &Error{
@@ -201,7 +201,7 @@ func Wrap(err error, message string) *Error {
 			Timestamp:     time.Now(),
 		}
 	}
-	
+
 	return &Error{
 		Message:       message,
 		Code:          errbuilder.CodeInternal,
@@ -219,19 +219,19 @@ func FromErrBuilder(err error) *Error {
 	if err == nil {
 		return nil
 	}
-	
+
 	// If the error is already a *Error, just return it
 	if e, ok := err.(*Error); ok {
 		return e
 	}
-	
+
 	// Try to convert from errbuilder.ErrBuilder
-	if e, ok := err.(errbuilder.ErrBuilder); ok {
+	if e, ok := err.(*errbuilder.ErrBuilder); ok {
 		category := CategoryInternal
 		severity := SeverityError
-		
+
 		// Map errbuilder codes to categories and severities
-		switch e.GetCode() {
+		switch e.Code {
 		case errbuilder.CodeInvalidArgument:
 			category = CategoryValidation
 			severity = SeverityWarning
@@ -272,27 +272,29 @@ func FromErrBuilder(err error) *Error {
 			category = CategorySecurity
 			severity = SeverityError
 		}
-		
+
 		result := &Error{
-			Message:       e.GetMsg(),
-			Code:          e.GetCode(),
+			Message:       e.Msg,
+			Code:          e.Code,
 			Category:      category,
 			Severity:      severity,
 			RetryStrategy: RetryNone,
-			Metadata:      make(map[string]interface{}),
-			Cause:         e.GetCause(),
+			Metadata:      make(map[string]any),
+			Cause:         e.Cause,
 			Stack:         captureStack(2), // Skip this function and the caller
 			Timestamp:     time.Now(),
 		}
-		
-		// Copy metadata
-		for k, v := range e.GetMeta() {
-			result.Metadata[k] = v
+
+		// Copy metadata if available
+		if e.Details.Errors != nil {
+			for k, v := range e.Details.Errors {
+				result.Metadata[k] = v
+			}
 		}
-		
+
 		return result
 	}
-	
+
 	// Just wrap the error
 	return Wrap(err, "")
 }
@@ -303,11 +305,11 @@ func captureStack(skip int) []StackFrame {
 	var pcs [depth]uintptr
 	n := runtime.Callers(skip, pcs[:])
 	frames := runtime.CallersFrames(pcs[:n])
-	
+
 	stack := make([]StackFrame, 0, n)
 	for {
 		frame, more := frames.Next()
-		
+
 		// Skip runtime and standard library frames
 		if strings.Contains(frame.File, "runtime/") {
 			if more {
@@ -315,18 +317,18 @@ func captureStack(skip int) []StackFrame {
 			}
 			break
 		}
-		
+
 		stack = append(stack, StackFrame{
 			File:     frame.File,
 			Line:     frame.Line,
 			Function: frame.Function,
 		})
-		
+
 		if !more {
 			break
 		}
 	}
-	
+
 	return stack
 }
 
@@ -335,17 +337,17 @@ func IsNotFound(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check if it's our Error type
 	if e, ok := err.(*Error); ok {
 		return e.Category == CategoryNotFound || e.Code == errbuilder.CodeNotFound
 	}
-	
+
 	// Check if it's an errbuilder.ErrBuilder
-	if e, ok := err.(errbuilder.ErrBuilder); ok {
-		return e.GetCode() == errbuilder.CodeNotFound
+	if e, ok := err.(*errbuilder.ErrBuilder); ok {
+		return e.Code == errbuilder.CodeNotFound
 	}
-	
+
 	// Check the error string as a last resort
 	return strings.Contains(strings.ToLower(err.Error()), "not found")
 }
@@ -355,17 +357,17 @@ func IsAlreadyExists(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check if it's our Error type
 	if e, ok := err.(*Error); ok {
 		return e.Category == CategoryAlreadyExists || e.Code == errbuilder.CodeAlreadyExists
 	}
-	
+
 	// Check if it's an errbuilder.ErrBuilder
-	if e, ok := err.(errbuilder.ErrBuilder); ok {
-		return e.GetCode() == errbuilder.CodeAlreadyExists
+	if e, ok := err.(*errbuilder.ErrBuilder); ok {
+		return e.Code == errbuilder.CodeAlreadyExists
 	}
-	
+
 	// Check the error string as a last resort
 	return strings.Contains(strings.ToLower(err.Error()), "already exists")
 }
@@ -375,12 +377,12 @@ func IsTimeout(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check if it's our Error type
 	if e, ok := err.(*Error); ok {
 		return e.Category == CategoryTimeout
 	}
-	
+
 	// Check the error string as a last resort
 	return strings.Contains(strings.ToLower(err.Error()), "timeout") ||
 		strings.Contains(strings.ToLower(err.Error()), "timed out")
@@ -391,12 +393,12 @@ func IsTemporary(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check if it's our Error type
 	if e, ok := err.(*Error); ok {
 		return e.RetryStrategy != RetryNone
 	}
-	
+
 	// Check the error string as a last resort
 	return strings.Contains(strings.ToLower(err.Error()), "temporary") ||
 		strings.Contains(strings.ToLower(err.Error()), "retry")
@@ -407,12 +409,12 @@ func IsCritical(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check if it's our Error type
 	if e, ok := err.(*Error); ok {
 		return e.Severity == SeverityCritical || e.Severity == SeverityFatal
 	}
-	
+
 	// Check the error string as a last resort
 	return strings.Contains(strings.ToLower(err.Error()), "critical") ||
 		strings.Contains(strings.ToLower(err.Error()), "fatal")
