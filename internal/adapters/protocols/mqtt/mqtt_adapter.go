@@ -8,7 +8,7 @@ import (
 	"time"
 
 	errbuilder "github.com/ZanzyTHEbar/errbuilder-go"
-	"github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
 
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/message"
@@ -18,29 +18,29 @@ import (
 
 // Config holds configuration for the MQTT adapter
 type Config struct {
-	BrokerURL          string
-	ClientID           string
-	Username           string
-	Password           string
-	CleanSession       bool
-	QoS                byte
-	ConnectTimeout     time.Duration
-	KeepAlive          time.Duration
-	PingTimeout        time.Duration
-	ConnectRetryDelay  time.Duration
+	BrokerURL            string
+	ClientID             string
+	Username             string
+	Password             string
+	CleanSession         bool
+	QoS                  byte
+	ConnectTimeout       time.Duration
+	KeepAlive            time.Duration
+	PingTimeout          time.Duration
+	ConnectRetryDelay    time.Duration
 	MaxReconnectAttempts int
-	TopicPrefix        string
+	TopicPrefix          string
 }
 
 // Adapter is an MQTT implementation of the ProtocolAdapter interface
 type Adapter struct {
-	config      Config
-	client      mqtt.Client
-	handler     adapters.MessageHandler
-	logger      logger.Logger
-	status      adapters.AdapterStatus
+	config       Config
+	client       mqtt.Client
+	handler      adapters.MessageHandler
+	logger       logger.Logger
+	status       adapters.AdapterStatus
 	deviceTopics map[string]string
-	mu          sync.RWMutex
+	mu           sync.RWMutex
 }
 
 // NewAdapter creates a new MQTT adapter

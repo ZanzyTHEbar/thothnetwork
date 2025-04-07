@@ -60,7 +60,7 @@ func (a *Adapter) Start(ctx context.Context) error {
 
 	// Create HTTP server
 	mux := http.NewServeMux()
-	
+
 	// Register routes
 	mux.HandleFunc(fmt.Sprintf("%s/devices", a.config.BasePath), a.handleDevices)
 	mux.HandleFunc(fmt.Sprintf("%s/devices/", a.config.BasePath), a.handleDevice)

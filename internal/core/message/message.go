@@ -22,25 +22,25 @@ const (
 type Message struct {
 	// ID is the unique identifier for the message
 	ID string `json:"id"`
-	
+
 	// Source is the source of the message (usually a device ID)
 	Source string `json:"source"`
-	
+
 	// Target is the target of the message (device ID, room ID, or "*" for broadcast)
 	Target string `json:"target"`
-	
+
 	// Type is the type of the message
 	Type Type `json:"type"`
-	
+
 	// Payload is the message payload
 	Payload []byte `json:"payload"`
-	
+
 	// ContentType is the MIME type of the payload
 	ContentType string `json:"content_type"`
-	
+
 	// Timestamp is when the message was created
 	Timestamp time.Time `json:"timestamp"`
-	
+
 	// Metadata is additional information about the message
 	Metadata map[string]string `json:"metadata"`
 }

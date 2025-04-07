@@ -22,25 +22,25 @@ const (
 type Device struct {
 	// ID is the unique identifier for the device
 	ID string `json:"id"`
-	
+
 	// Name is the human-readable name of the device
 	Name string `json:"name"`
-	
+
 	// Type is the type of the device
 	Type string `json:"type"`
-	
+
 	// Status is the current status of the device
 	Status Status `json:"status"`
-	
+
 	// Metadata is additional information about the device
 	Metadata map[string]string `json:"metadata"`
-	
+
 	// LastSeen is the timestamp when the device was last seen
 	LastSeen time.Time `json:"last_seen"`
-	
+
 	// CreatedAt is the timestamp when the device was created
 	CreatedAt time.Time `json:"created_at"`
-	
+
 	// UpdatedAt is the timestamp when the device was last updated
 	UpdatedAt time.Time `json:"updated_at"`
 }

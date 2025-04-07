@@ -3,7 +3,7 @@ package stages
 import (
 	"context"
 
-	"github.com/ZanzyTHEbar/errbuilder-go"
+	errbuilder "github.com/ZanzyTHEbar/errbuilder-go"
 	"github.com/google/uuid"
 
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/message"
@@ -56,10 +56,7 @@ func (s *TransformationStage) Process(ctx context.Context, msg *message.Message)
 		currentMsg, err = transformer(ctx, currentMsg)
 		if err != nil {
 			s.logger.Warn("Message transformation failed", "error", err)
-			return nil, errbuilder.New().
-				WithMessage("Message transformation failed").
-				WithError(err).
-				Build()
+			return nil, errbuilder.GenericErr("Message transformation failed", err)
 		}
 
 		// If the transformer returns nil, stop processing
@@ -84,12 +81,7 @@ func ContentTypeTransformer(sourceType, targetType string, transformFn func([]by
 		// Transform payload
 		newPayload, err := transformFn(msg.Payload)
 		if err != nil {
-			return nil, errbuilder.New().
-				WithMessage("Failed to transform payload").
-				WithField("source_type", sourceType).
-				WithField("target_type", targetType).
-				WithError(err).
-				Build()
+			return nil, errbuilder.GenericErr("Failed to transform payload", err)
 		}
 
 		// Create a new message with the transformed payload

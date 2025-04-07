@@ -2,8 +2,9 @@ package stages
 
 import (
 	"context"
+	"slices"
 
-	"github.com/ZanzyTHEbar/errbuilder-go"
+	errbuilder "github.com/ZanzyTHEbar/errbuilder-go"
 	"github.com/google/uuid"
 
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/message"
@@ -52,10 +53,7 @@ func (s *ValidationStage) Process(ctx context.Context, msg *message.Message) (*m
 	for _, validator := range s.validators {
 		if err := validator(ctx, msg); err != nil {
 			s.logger.Warn("Message validation failed", "error", err)
-			return nil, errbuilder.New().
-				WithMessage("Message validation failed").
-				WithError(err).
-				Build()
+			return nil, errbuilder.GenericErr("Message validation failed", err)
 		}
 	}
 
@@ -68,21 +66,15 @@ func (s *ValidationStage) Process(ctx context.Context, msg *message.Message) (*m
 func RequiredFieldsValidator() Validator {
 	return func(ctx context.Context, msg *message.Message) error {
 		if msg.ID == "" {
-			return errbuilder.New().
-				WithMessage("Message ID is required").
-				Build()
+			return errbuilder.GenericErr("Message ID is required", nil)
 		}
 
 		if msg.Source == "" {
-			return errbuilder.New().
-				WithMessage("Message source is required").
-				Build()
+			return errbuilder.GenericErr("Message source is required", nil)
 		}
 
 		if msg.Type == "" {
-			return errbuilder.New().
-				WithMessage("Message type is required").
-				Build()
+			return errbuilder.GenericErr("Message type is required", nil)
 		}
 
 		return nil
@@ -93,11 +85,7 @@ func RequiredFieldsValidator() Validator {
 func PayloadSizeValidator(maxSize int) Validator {
 	return func(ctx context.Context, msg *message.Message) error {
 		if len(msg.Payload) > maxSize {
-			return errbuilder.New().
-				WithMessage("Payload size exceeds maximum").
-				WithField("max_size", maxSize).
-				WithField("actual_size", len(msg.Payload)).
-				Build()
+			return errbuilder.GenericErr("Payload size exceeds maximum", nil)
 		}
 
 		return nil
@@ -111,16 +99,10 @@ func ContentTypeValidator(supportedTypes ...string) Validator {
 			return nil // No content type specified, skip validation
 		}
 
-		for _, supportedType := range supportedTypes {
-			if msg.ContentType == supportedType {
-				return nil
-			}
+		if slices.Contains(supportedTypes, msg.ContentType) {
+			return nil
 		}
 
-		return errbuilder.New().
-			WithMessage("Unsupported content type").
-			WithField("content_type", msg.ContentType).
-			WithField("supported_types", supportedTypes).
-			Build()
+		return errbuilder.GenericErr("Unsupported content type", nil)
 	}
 }

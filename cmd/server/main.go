@@ -33,6 +33,10 @@ func main() {
 	go func() {
 		// TODO: Initialize and start server components
 		log.Info("Server started", "config", cfg)
+
+		// Wait for context cancellation
+		<-ctx.Done()
+		log.Info("Context cancelled, shutting down server components...")
 	}()
 
 	// Block until we receive a termination signal

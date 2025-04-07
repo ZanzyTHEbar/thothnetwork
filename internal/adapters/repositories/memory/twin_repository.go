@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ZanzyTHEbar/errbuilder-go"
+	errbuilder "github.com/ZanzyTHEbar/errbuilder-go"
 
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/twin"
 )

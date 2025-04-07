@@ -2,9 +2,10 @@ package pipeline
 
 import (
 	"context"
+	"slices"
 	"sync"
 
-	"github.com/ZanzyTHEbar/errbuilder-go"
+	errbuilder "github.com/ZanzyTHEbar/errbuilder-go"
 
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/message"
 	"github.com/ZanzyTHEbar/thothnetwork/pkg/logger"
@@ -49,10 +50,7 @@ func (p *Pipeline) AddStage(stage ProcessingStage) error {
 	// Check if stage with same ID already exists
 	for _, s := range p.stages {
 		if s.ID() == stage.ID() {
-			return errbuilder.New().
-				WithMessage("Stage with same ID already exists").
-				WithField("stage_id", stage.ID()).
-				Build()
+			return errbuilder.GenericErr("Stage with same ID already exists", nil)
 		}
 	}
 
@@ -68,16 +66,13 @@ func (p *Pipeline) RemoveStage(id string) error {
 
 	for i, stage := range p.stages {
 		if stage.ID() == id {
-			p.stages = append(p.stages[:i], p.stages[i+1:]...)
+			p.stages = slices.Delete(p.stages, i, i+1)
 			p.logger.Info("Removed processing stage", "stage_id", id)
 			return nil
 		}
 	}
 
-	return errbuilder.New().
-		WithMessage("Stage not found").
-		WithField("stage_id", id).
-		Build()
+	return errbuilder.GenericErr("Stage not found", nil)
 }
 
 // GetStages returns all processing stages in the pipeline
@@ -111,12 +106,7 @@ func (p *Pipeline) Process(ctx context.Context, msg *message.Message) (*message.
 		// Process the message
 		currentMsg, err = stage.Process(ctx, currentMsg)
 		if err != nil {
-			return nil, errbuilder.New().
-				WithMessage("Failed to process message").
-				WithField("stage_id", stage.ID()).
-				WithField("stage_name", stage.Name()).
-				WithError(err).
-				Build()
+			return nil, errbuilder.GenericErr("Failed to process message", err)
 		}
 
 		// If the message is nil, stop processing

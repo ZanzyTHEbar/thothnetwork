@@ -117,18 +117,18 @@ func main() {
 	}, log)
 
 	mqttAdpt := mqttAdapter.NewAdapter(mqttAdapter.Config{
-		BrokerURL:           cfg.MQTT.BrokerURL,
-		ClientID:            cfg.MQTT.ClientID,
-		Username:            cfg.MQTT.Username,
-		Password:            cfg.MQTT.Password,
-		CleanSession:        cfg.MQTT.CleanSession,
-		QoS:                 cfg.MQTT.QoS,
-		ConnectTimeout:      cfg.MQTT.ConnectTimeout,
-		KeepAlive:           cfg.MQTT.KeepAlive,
-		PingTimeout:         cfg.MQTT.PingTimeout,
-		ConnectRetryDelay:   cfg.MQTT.ConnectRetryDelay,
+		BrokerURL:            cfg.MQTT.BrokerURL,
+		ClientID:             cfg.MQTT.ClientID,
+		Username:             cfg.MQTT.Username,
+		Password:             cfg.MQTT.Password,
+		CleanSession:         cfg.MQTT.CleanSession,
+		QoS:                  cfg.MQTT.QoS,
+		ConnectTimeout:       cfg.MQTT.ConnectTimeout,
+		KeepAlive:            cfg.MQTT.KeepAlive,
+		PingTimeout:          cfg.MQTT.PingTimeout,
+		ConnectRetryDelay:    cfg.MQTT.ConnectRetryDelay,
 		MaxReconnectAttempts: cfg.MQTT.MaxReconnectAttempts,
-		TopicPrefix:         cfg.MQTT.TopicPrefix,
+		TopicPrefix:          cfg.MQTT.TopicPrefix,
 	}, log)
 
 	wsAdpt := wsAdapter.NewAdapter(wsAdapter.Config{

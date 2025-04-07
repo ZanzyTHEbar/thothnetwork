@@ -69,18 +69,18 @@ type HTTPConfig struct {
 
 // MQTTConfig holds configuration for the MQTT adapter
 type MQTTConfig struct {
-	BrokerURL           string        `mapstructure:"broker_url"`
-	ClientID            string        `mapstructure:"client_id"`
-	Username            string        `mapstructure:"username"`
-	Password            string        `mapstructure:"password"`
-	CleanSession        bool          `mapstructure:"clean_session"`
-	QoS                 byte          `mapstructure:"qos"`
-	ConnectTimeout      time.Duration `mapstructure:"connect_timeout"`
-	KeepAlive           time.Duration `mapstructure:"keep_alive"`
-	PingTimeout         time.Duration `mapstructure:"ping_timeout"`
-	ConnectRetryDelay   time.Duration `mapstructure:"connect_retry_delay"`
+	BrokerURL            string        `mapstructure:"broker_url"`
+	ClientID             string        `mapstructure:"client_id"`
+	Username             string        `mapstructure:"username"`
+	Password             string        `mapstructure:"password"`
+	CleanSession         bool          `mapstructure:"clean_session"`
+	QoS                  byte          `mapstructure:"qos"`
+	ConnectTimeout       time.Duration `mapstructure:"connect_timeout"`
+	KeepAlive            time.Duration `mapstructure:"keep_alive"`
+	PingTimeout          time.Duration `mapstructure:"ping_timeout"`
+	ConnectRetryDelay    time.Duration `mapstructure:"connect_retry_delay"`
 	MaxReconnectAttempts int           `mapstructure:"max_reconnect_attempts"`
-	TopicPrefix         string        `mapstructure:"topic_prefix"`
+	TopicPrefix          string        `mapstructure:"topic_prefix"`
 }
 
 // WebSocketConfig holds configuration for the WebSocket adapter

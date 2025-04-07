@@ -3,11 +3,12 @@ package websocket
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/ZanzyTHEbar/errbuilder-go"
+	errbuilder "github.com/ZanzyTHEbar/errbuilder-go"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
@@ -74,9 +75,10 @@ func (a *Adapter) Start(ctx context.Context) error {
 
 	// Check if already started
 	if a.status != adapters.StatusStopped {
-		return errbuilder.New().
-			WithMessage("Adapter already started").
-			Build()
+		builder := errbuilder.NewErrBuilder().
+			WithMsg("Adapter already started").
+			WithCode(errbuilder.CodeFailedPrecondition)
+		return builder
 	}
 
 	a.status = adapters.StatusStarting
@@ -86,7 +88,7 @@ func (a *Adapter) Start(ctx context.Context) error {
 	mux.HandleFunc(a.config.Path, a.handleWebSocket)
 
 	a.server = &http.Server{
-		Addr:    a.config.Host + ":" + string(a.config.Port),
+		Addr:    fmt.Sprintf("%s:%d", a.config.Host, a.config.Port),
 		Handler: mux,
 	}
 
@@ -129,10 +131,11 @@ func (a *Adapter) Stop(ctx context.Context) error {
 	// Shutdown server
 	if a.server != nil {
 		if err := a.server.Shutdown(ctx); err != nil {
-			return errbuilder.New().
-				WithMessage("Failed to shutdown WebSocket server").
-				WithError(err).
-				Build()
+			builder := errbuilder.NewErrBuilder().
+				WithMsg(fmt.Sprintf("Failed to shutdown WebSocket server on %s:%d", a.config.Host, a.config.Port)).
+				WithCause(err).
+				WithCode(errbuilder.CodeInternal)
+			return builder
 		}
 	}
 
@@ -165,19 +168,20 @@ func (a *Adapter) SendMessage(ctx context.Context, deviceID string, msg *message
 	a.mu.RUnlock()
 
 	if !exists {
-		return errbuilder.New().
-			WithMessage("Device not connected").
-			WithField("device_id", deviceID).
-			Build()
+		builder := errbuilder.NewErrBuilder().
+			WithMsg(fmt.Sprintf("Device not connected: %s", deviceID)).
+			WithCode(errbuilder.CodeNotFound)
+		return builder
 	}
 
 	// Marshal message to JSON
 	data, err := json.Marshal(msg)
 	if err != nil {
-		return errbuilder.New().
-			WithMessage("Failed to marshal message").
-			WithError(err).
-			Build()
+		builder := errbuilder.NewErrBuilder().
+			WithMsg(fmt.Sprintf("Failed to marshal message ID: %s, Type: %s", msg.ID, msg.Type)).
+			WithCause(err).
+			WithCode(errbuilder.CodeInternal)
+		return builder
 	}
 
 	// Send message
@@ -187,10 +191,10 @@ func (a *Adapter) SendMessage(ctx context.Context, deviceID string, msg *message
 	default:
 		// Channel full, close connection
 		a.closeConnection(conn)
-		return errbuilder.New().
-			WithMessage("Failed to send message, connection buffer full").
-			WithField("device_id", deviceID).
-			Build()
+		builder := errbuilder.NewErrBuilder().
+			WithMsg(fmt.Sprintf("Failed to send message, connection buffer full for device: %s, buffer size: %d", deviceID, len(conn.Send))).
+			WithCode(errbuilder.CodeResourceExhausted)
+		return builder
 	}
 }
 
@@ -310,7 +314,7 @@ func (a *Adapter) writePump(conn *Connection) {
 
 			// Add queued messages
 			n := len(conn.Send)
-			for i := 0; i < n; i++ {
+			for range make([]struct{}, n) {
 				w.Write([]byte{'\n'})
 				w.Write(<-conn.Send)
 			}

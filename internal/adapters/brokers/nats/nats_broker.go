@@ -7,7 +7,7 @@ import (
 	"time"
 
 	errbuilder "github.com/ZanzyTHEbar/errbuilder-go"
-	"github.com/nats-io/nats.go"
+	natslib "github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/message"
@@ -17,7 +17,7 @@ import (
 
 // Subscription implements the brokers.Subscription interface
 type Subscription struct {
-	sub    *nats.Subscription
+	sub    *natslib.Subscription
 	topic  string
 	broker *MessageBroker
 }
@@ -34,7 +34,7 @@ func (s *Subscription) Topic() string {
 
 // MessageBroker is a NATS implementation of the MessageBroker interface
 type MessageBroker struct {
-	conn          *nats.Conn
+	conn          *natslib.Conn
 	js            jetstream.JetStream
 	config        Config
 	logger        logger.Logger
@@ -75,45 +75,45 @@ func (b *MessageBroker) Connect(ctx context.Context) error {
 	}
 
 	// Create connection options
-	opts := []nats.Option{
-		nats.Name("thothnetwork"),
-		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+	opts := []natslib.Option{
+		natslib.Name("thothnetwork"),
+		natslib.DisconnectErrHandler(func(nc *natslib.Conn, err error) {
 			b.logger.Warn("NATS disconnected", "error", err)
 		}),
-		nats.ReconnectHandler(func(nc *nats.Conn) {
+		natslib.ReconnectHandler(func(nc *natslib.Conn) {
 			b.logger.Info("NATS reconnected", "url", nc.ConnectedUrl())
 		}),
-		nats.ClosedHandler(func(nc *nats.Conn) {
+		natslib.ClosedHandler(func(nc *natslib.Conn) {
 			b.logger.Info("NATS connection closed")
 		}),
 	}
 
 	// Add reconnect options
 	if b.config.MaxReconnects > 0 {
-		opts = append(opts, nats.MaxReconnects(b.config.MaxReconnects))
+		opts = append(opts, natslib.MaxReconnects(b.config.MaxReconnects))
 	} else {
-		opts = append(opts, nats.MaxReconnects(nats.DefaultMaxReconnect))
+		opts = append(opts, natslib.MaxReconnects(natslib.DefaultMaxReconnect))
 	}
 
 	if b.config.ReconnectWait > 0 {
-		opts = append(opts, nats.ReconnectWait(b.config.ReconnectWait))
+		opts = append(opts, natslib.ReconnectWait(b.config.ReconnectWait))
 	} else {
-		opts = append(opts, nats.ReconnectWait(nats.DefaultReconnectWait))
+		opts = append(opts, natslib.ReconnectWait(natslib.DefaultReconnectWait))
 	}
 
 	if b.config.Timeout > 0 {
-		opts = append(opts, nats.Timeout(b.config.Timeout))
+		opts = append(opts, natslib.Timeout(b.config.Timeout))
 	}
 
 	// Add authentication options
 	if b.config.Username != "" && b.config.Password != "" {
-		opts = append(opts, nats.UserInfo(b.config.Username, b.config.Password))
+		opts = append(opts, natslib.UserInfo(b.config.Username, b.config.Password))
 	} else if b.config.Token != "" {
-		opts = append(opts, nats.Token(b.config.Token))
+		opts = append(opts, natslib.Token(b.config.Token))
 	}
 
 	// Connect to NATS
-	conn, err := nats.Connect(b.config.URL, opts...)
+	conn, err := natslib.Connect(b.config.URL, opts...)
 	if err != nil {
 		return errbuilder.GenericErr("Failed to connect to NATS", err)
 	}
@@ -196,7 +196,7 @@ func (b *MessageBroker) Subscribe(ctx context.Context, topic string, handler bro
 	}
 
 	// Create subscription
-	sub, err := b.conn.Subscribe(topic, func(m *nats.Msg) {
+	sub, err := b.conn.Subscribe(topic, func(m *natslib.Msg) {
 		// Unmarshal message
 		var msg message.Message
 		if err := json.Unmarshal(m.Data, &msg); err != nil {

@@ -3,7 +3,7 @@ package stream
 import (
 	"context"
 
-	"github.com/ZanzyTHEbar/errbuilder-go"
+	errbuilder "github.com/ZanzyTHEbar/errbuilder-go"
 
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/message"
 	"github.com/ZanzyTHEbar/thothnetwork/internal/ports/brokers"
@@ -58,10 +58,7 @@ func NewService(
 func (s *Service) CreateStream(ctx context.Context, name string, config StreamConfig) error {
 	// Create stream in message broker
 	if err := s.messageBroker.CreateStream(ctx, name, config.Subjects); err != nil {
-		return errbuilder.New().
-			WithMessage("Failed to create stream").
-			WithError(err).
-			Build()
+		return errbuilder.GenericErr("Failed to create stream", err)
 	}
 
 	// Store stream configuration
@@ -104,10 +101,7 @@ func (s *Service) CreateStream(ctx context.Context, name string, config StreamCo
 func (s *Service) DeleteStream(ctx context.Context, name string) error {
 	// Delete stream from message broker
 	if err := s.messageBroker.DeleteStream(ctx, name); err != nil {
-		return errbuilder.New().
-			WithMessage("Failed to delete stream").
-			WithError(err).
-			Build()
+		return errbuilder.GenericErr("Failed to delete stream", err)
 	}
 
 	// Remove stream configuration
@@ -132,17 +126,12 @@ func (s *Service) ListStreams() map[string]StreamConfig {
 func (s *Service) PublishToStream(ctx context.Context, streamName string, subject string, msg *message.Message) error {
 	// Check if stream exists
 	if _, exists := s.streams[streamName]; !exists {
-		return errbuilder.New().
-			WithMessage("Stream does not exist").
-			Build()
+		return errbuilder.GenericErr("Stream does not exist", nil)
 	}
 
 	// Publish message to subject
 	if err := s.messageBroker.Publish(ctx, subject, msg); err != nil {
-		return errbuilder.New().
-			WithMessage("Failed to publish message to stream").
-			WithError(err).
-			Build()
+		return errbuilder.GenericErr("Failed to publish message to stream", err)
 	}
 
 	return nil
@@ -157,18 +146,13 @@ func (s *Service) SubscribeToStream(
 ) (brokers.Subscription, error) {
 	// Check if stream exists
 	if _, exists := s.streams[streamName]; !exists {
-		return nil, errbuilder.New().
-			WithMessage("Stream does not exist").
-			Build()
+		return nil, errbuilder.GenericErr("Stream does not exist", nil)
 	}
 
 	// Subscribe to subject
 	subscription, err := s.messageBroker.Subscribe(ctx, subject, handler)
 	if err != nil {
-		return nil, errbuilder.New().
-			WithMessage("Failed to subscribe to stream").
-			WithError(err).
-			Build()
+		return nil, errbuilder.GenericErr("Failed to subscribe to stream", err)
 	}
 
 	return subscription, nil

@@ -5,15 +5,15 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ZanzyTHEbar/errbuilder-go"
+	errbuilder "github.com/ZanzyTHEbar/errbuilder-go"
 )
 
 // Pool represents a worker pool for executing tasks concurrently
 type Pool struct {
 	tasks       chan func()
-	numWorkers  int32
+	numWorkers  atomic.Int32
 	maxWorkers  int32
-	activeCount int32
+	activeCount atomic.Int32
 	wg          sync.WaitGroup
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -24,41 +24,39 @@ type Pool struct {
 // NewPool creates a new worker pool with the specified number of workers
 func NewPool(maxWorkers int) *Pool {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Pool{
+	p := &Pool{
 		tasks:      make(chan func(), 100), // Buffer size of 100
-		numWorkers: 0,
 		maxWorkers: int32(maxWorkers),
 		ctx:        ctx,
 		cancel:     cancel,
 	}
+	p.numWorkers.Store(0)
+	p.activeCount.Store(0)
+	return p
 }
 
 // Start starts the worker pool with the specified number of workers
 func (p *Pool) Start(numWorkers int) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if p.started.Load() {
-		return errbuilder.New().
-			WithMessage("Worker pool already started").
-			Build()
+		return errbuilder.GenericErr("Worker pool already started", nil)
 	}
-	
+
 	if numWorkers <= 0 {
-		return errbuilder.New().
-			WithMessage("Number of workers must be greater than zero").
-			Build()
+		return errbuilder.GenericErr("Number of workers must be greater than zero", nil)
 	}
-	
+
 	if int32(numWorkers) > p.maxWorkers {
 		numWorkers = int(p.maxWorkers)
 	}
-	
+
 	// Start workers
-	for i := 0; i < numWorkers; i++ {
+	for range make([]struct{}, numWorkers) {
 		p.startWorker()
 	}
-	
+
 	p.started.Store(true)
 	return nil
 }
@@ -67,44 +65,38 @@ func (p *Pool) Start(numWorkers int) error {
 func (p *Pool) Stop() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if !p.started.Load() {
-		return errbuilder.New().
-			WithMessage("Worker pool not started").
-			Build()
+		return errbuilder.GenericErr("Worker pool not started", nil)
 	}
-	
+
 	// Cancel context to signal workers to stop
 	p.cancel()
-	
+
 	// Wait for all workers to finish
 	p.wg.Wait()
-	
+
 	// Create new context for future use
 	p.ctx, p.cancel = context.WithCancel(context.Background())
-	
+
 	p.started.Store(false)
-	atomic.StoreInt32(&p.numWorkers, 0)
-	atomic.StoreInt32(&p.activeCount, 0)
-	
+	p.numWorkers.Store(0)
+	p.activeCount.Store(0)
+
 	return nil
 }
 
 // Submit submits a task to the worker pool
 func (p *Pool) Submit(task func()) error {
 	if !p.started.Load() {
-		return errbuilder.New().
-			WithMessage("Worker pool not started").
-			Build()
+		return errbuilder.GenericErr("Worker pool not started", nil)
 	}
-	
+
 	select {
 	case p.tasks <- task:
 		return nil
 	case <-p.ctx.Done():
-		return errbuilder.New().
-			WithMessage("Worker pool stopped").
-			Build()
+		return errbuilder.GenericErr("Worker pool stopped", nil)
 	}
 }
 
@@ -112,31 +104,27 @@ func (p *Pool) Submit(task func()) error {
 func (p *Pool) Resize(numWorkers int) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if !p.started.Load() {
-		return errbuilder.New().
-			WithMessage("Worker pool not started").
-			Build()
+		return errbuilder.GenericErr("Worker pool not started", nil)
 	}
-	
+
 	if numWorkers <= 0 {
-		return errbuilder.New().
-			WithMessage("Number of workers must be greater than zero").
-			Build()
+		return errbuilder.GenericErr("Number of workers must be greater than zero", nil)
 	}
-	
+
 	if int32(numWorkers) > p.maxWorkers {
 		numWorkers = int(p.maxWorkers)
 	}
-	
-	current := atomic.LoadInt32(&p.numWorkers)
+
+	current := p.numWorkers.Load()
 	target := int32(numWorkers)
-	
+
 	// Add workers if needed
 	for i := current; i < target; i++ {
 		p.startWorker()
 	}
-	
+
 	// Remove workers if needed (they will exit when context is cancelled)
 	if current > target {
 		diff := current - target
@@ -147,45 +135,45 @@ func (p *Pool) Resize(numWorkers int) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 // ActiveCount returns the number of active workers
 func (p *Pool) ActiveCount() int {
-	return int(atomic.LoadInt32(&p.activeCount))
+	return int(p.activeCount.Load())
 }
 
 // WorkerCount returns the total number of workers
 func (p *Pool) WorkerCount() int {
-	return int(atomic.LoadInt32(&p.numWorkers))
+	return int(p.numWorkers.Load())
 }
 
 // startWorker starts a new worker
 func (p *Pool) startWorker() {
 	p.wg.Add(1)
-	atomic.AddInt32(&p.numWorkers, 1)
-	
+	p.numWorkers.Add(1)
+
 	go func() {
 		defer func() {
 			// Recover from panics
 			if r := recover(); r != nil {
 				// If this is our special exit signal, decrement the worker count
 				if r == "worker exit signal" {
-					atomic.AddInt32(&p.numWorkers, -1)
+					p.numWorkers.Add(-1)
 				}
 				// Otherwise, it's a real panic, but we still need to decrement
-				atomic.AddInt32(&p.numWorkers, -1)
+				p.numWorkers.Add(-1)
 			}
 			p.wg.Done()
 		}()
-		
+
 		for {
 			select {
 			case task := <-p.tasks:
 				// Increment active count
-				atomic.AddInt32(&p.activeCount, 1)
-				
+				p.activeCount.Add(1)
+
 				// Execute task
 				func() {
 					defer func() {
@@ -198,14 +186,14 @@ func (p *Pool) startWorker() {
 							// Otherwise, just continue
 						}
 						// Decrement active count
-						atomic.AddInt32(&p.activeCount, -1)
+						p.activeCount.Add(-1)
 					}()
 					task()
 				}()
-				
+
 			case <-p.ctx.Done():
 				// Context cancelled, exit
-				atomic.AddInt32(&p.numWorkers, -1)
+				p.numWorkers.Add(-1)
 				return
 			}
 		}

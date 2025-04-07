@@ -20,22 +20,22 @@ const (
 type Room struct {
 	// ID is the unique identifier for the room
 	ID string `json:"id"`
-	
+
 	// Name is the human-readable name of the room
 	Name string `json:"name"`
-	
+
 	// Type is the type of the room
 	Type Type `json:"type"`
-	
+
 	// Devices is the list of device IDs in the room
 	Devices []string `json:"devices"`
-	
+
 	// Metadata is additional information about the room
 	Metadata map[string]string `json:"metadata"`
-	
+
 	// CreatedAt is the timestamp when the room was created
 	CreatedAt time.Time `json:"created_at"`
-	
+
 	// UpdatedAt is the timestamp when the room was last updated
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -57,12 +57,13 @@ func NewRoom(id, name string, roomType Type) *Room {
 // AddDevice adds a device to the room
 func (r *Room) AddDevice(deviceID string) bool {
 	// Check if device is already in the room
+	// TODO: Optimize this
 	for _, id := range r.Devices {
 		if id == deviceID {
 			return false
 		}
 	}
-	
+
 	// Add device to the room
 	r.Devices = append(r.Devices, deviceID)
 	r.UpdatedAt = time.Now()
@@ -71,6 +72,7 @@ func (r *Room) AddDevice(deviceID string) bool {
 
 // RemoveDevice removes a device from the room
 func (r *Room) RemoveDevice(deviceID string) bool {
+	// TODO: Optimize this
 	for i, id := range r.Devices {
 		if id == deviceID {
 			// Remove device from the room

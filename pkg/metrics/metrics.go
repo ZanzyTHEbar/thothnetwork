@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -104,7 +105,7 @@ func NewMetrics(config Config, logger logger.Logger) *Metrics {
 	mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 
 	m.server = &http.Server{
-		Addr:    config.Host + ":" + string(config.Port),
+		Addr:    fmt.Sprintf("%s:%d", config.Host, config.Port),
 		Handler: mux,
 	}
 
