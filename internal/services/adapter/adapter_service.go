@@ -117,7 +117,7 @@ func (s *Service) ListAdapters() map[string]adapters.AdapterStatus {
 
 // SendMessageToDevice sends a message to a device through the appropriate adapter
 func (s *Service) SendMessageToDevice(ctx context.Context, deviceID string, msg *message.Message) error {
-	// In a real implementation, we would determine which adapter to use based on the device ID
+	// TODO: In a real implementation, we would determine which adapter to use based on the device ID
 	// For now, we'll just publish the message to the broker
 	return s.broker.Publish(ctx, "devices."+deviceID, msg)
 }

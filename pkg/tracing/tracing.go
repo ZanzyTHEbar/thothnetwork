@@ -1,5 +1,7 @@
 package tracing
 
+// TODO: Deprecated: This module is no longer supported. OpenTelemetry dropped support for Jaeger exporter in July 2023. Jaeger officially accepts and recommends using OTLP. Use go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp or go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc instead.
+
 import (
 	"context"
 	"io"
