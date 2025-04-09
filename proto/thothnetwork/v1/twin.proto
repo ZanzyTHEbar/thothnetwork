@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package thothnetwork.v1;
+package proto.thothnetwork.v1;
 
 import "buf/validate/validate.proto";
-import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/ZanzyTHEbar/thothnetwork/gen/proto/v1;thothnetworkv1";
 
@@ -12,19 +12,19 @@ option go_package = "github.com/ZanzyTHEbar/thothnetwork/gen/proto/v1;thothnetwo
 message DigitalTwin {
   // DeviceID is the ID of the device this twin represents
   string device_id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // State is the current state of the device
   google.protobuf.Struct state = 2;
-  
+
   // Desired is the desired state of the device
   google.protobuf.Struct desired = 3;
-  
+
   // Version is the version of the twin
   int64 version = 4;
-  
+
   // LastUpdated is the timestamp when the twin was last updated
   google.protobuf.Timestamp last_updated = 5;
-  
+
   // Metadata is additional information about the twin
   google.protobuf.Struct metadata = 6;
 }
@@ -45,7 +45,7 @@ message GetTwinResponse {
 message UpdateTwinStateRequest {
   // DeviceID is the ID of the device
   string device_id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // State is the new state of the device
   google.protobuf.Struct state = 2;
 }
@@ -60,7 +60,7 @@ message UpdateTwinStateResponse {
 message UpdateTwinDesiredRequest {
   // DeviceID is the ID of the device
   string device_id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Desired is the new desired state of the device
   google.protobuf.Struct desired = 2;
 }
@@ -69,7 +69,7 @@ message UpdateTwinDesiredRequest {
 message UpdateTwinDesiredResponse {
   // Twin is the updated digital twin
   DigitalTwin twin = 1;
-  
+
   // Delta is the difference between desired and current state
   google.protobuf.Struct delta = 2;
 }
@@ -90,13 +90,13 @@ message DeleteTwinResponse {
 service TwinService {
   // GetTwin retrieves a digital twin by device ID
   rpc GetTwin(GetTwinRequest) returns (GetTwinResponse);
-  
+
   // UpdateTwinState updates the state of a digital twin
   rpc UpdateTwinState(UpdateTwinStateRequest) returns (UpdateTwinStateResponse);
-  
+
   // UpdateTwinDesired updates the desired state of a digital twin
   rpc UpdateTwinDesired(UpdateTwinDesiredRequest) returns (UpdateTwinDesiredResponse);
-  
+
   // DeleteTwin deletes a digital twin
   rpc DeleteTwin(DeleteTwinRequest) returns (DeleteTwinResponse);
 }

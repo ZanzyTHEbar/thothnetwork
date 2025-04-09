@@ -1,18 +1,22 @@
-version: v1
+version: v2
 plugins:
-  - plugin: go
-    out: gen
+  # Go code generation
+  - remote: buf.build/protocolbuffers/go
+    out: pkg/gen
     opt:
       - paths=source_relative
-  - plugin: go-grpc
-    out: gen
+  # Go gRPC code generation
+  - remote: buf.build/grpc/go
+    out: pkg/gen
     opt:
       - paths=source_relative
-  - plugin: grpc-gateway
-    out: gen
+  # Validation for Go
+  - remote: buf.build/bufbuild/validate-go
+    out: pkg/gen
     opt:
       - paths=source_relative
-  - plugin: buf.build/bufbuild/validate-go
-    out: gen
+  # gRPC Gateway for REST API generation
+  - remote: buf.build/grpc-ecosystem/gateway
+    out: pkg/gen
     opt:
       - paths=source_relative

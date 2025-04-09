@@ -17,9 +17,13 @@ import (
 	"github.com/ZanzyTHEbar/thothnetwork/internal/config"
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/message"
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/pipeline"
+	actorService "github.com/ZanzyTHEbar/thothnetwork/internal/services/actor"
 	adapterService "github.com/ZanzyTHEbar/thothnetwork/internal/services/adapter"
 	deviceService "github.com/ZanzyTHEbar/thothnetwork/internal/services/device"
 	pipelineService "github.com/ZanzyTHEbar/thothnetwork/internal/services/pipeline"
+	roomService "github.com/ZanzyTHEbar/thothnetwork/internal/services/room"
+	streamService "github.com/ZanzyTHEbar/thothnetwork/internal/services/stream"
+	"github.com/ZanzyTHEbar/thothnetwork/pkg/actor"
 	"github.com/ZanzyTHEbar/thothnetwork/pkg/logger"
 	"github.com/ZanzyTHEbar/thothnetwork/pkg/metrics"
 	"github.com/ZanzyTHEbar/thothnetwork/pkg/tracing"
@@ -46,12 +50,18 @@ type Server struct {
 	// Services
 	DeviceService   *deviceService.Service
 	PipelineService *pipelineService.Service
+	RoomService     *roomService.Service
 	AdapterService  *adapterService.Service
+	ActorService    *actorService.Service
+	StreamService   *streamService.Service
 
 	// Adapters
 	HTTPAdapter      *httpAdapter.Adapter
 	MQTTAdapter      *mqttAdapter.Adapter
 	WebSocketAdapter *wsAdapter.Adapter
+
+	// Actor system
+	ActorSystem *actor.ActorSystem
 
 	// Pipeline
 	DefaultPipelineID string
@@ -113,10 +123,21 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		Timeout:       cfg.NATS.Timeout,
 	}, log)
 
+	// Create actor system
+	server.ActorSystem = actor.NewActorSystem(actor.Config{
+		Address:     cfg.Actor.Address,
+		Port:        cfg.Actor.Port,
+		ClusterName: cfg.Actor.ClusterName,
+	}, log)
+
 	// Create services
 	server.DeviceService = deviceService.NewService(server.DeviceRepo, server.TwinRepo, server.Broker, log)
 	server.PipelineService = pipelineService.NewService(server.Broker, log)
+	server.RoomService = roomService.NewService(server.RoomRepo, server.DeviceRepo, server.Broker, log)
 	server.AdapterService = adapterService.NewService(server.Broker, log)
+	server.ActorService = actorService.NewService(server.ActorSystem, server.DeviceRepo, server.RoomRepo, log)
+	// Create stream service with nil pipeline for now
+	server.StreamService = streamService.NewService(server.Broker, nil, log)
 
 	// Create protocol adapters
 	server.HTTPAdapter = httpAdapter.NewAdapter(httpAdapter.Config{
@@ -154,6 +175,8 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		PongWait:        cfg.WebSocket.PongWait,
 	}, log)
 
+	// TODO: Create gRPC adapter
+
 	return server, nil
 }
 
@@ -179,6 +202,7 @@ func (s *Server) Start(ctx context.Context) error {
 	if err := s.AdapterService.RegisterAdapter("websocket", s.WebSocketAdapter); err != nil {
 		return fmt.Errorf("failed to register WebSocket adapter: %w", err)
 	}
+	
 
 	// Start adapters
 	if err := s.AdapterService.StartAdapter(ctx, "http"); err != nil {
@@ -189,6 +213,17 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 	if err := s.AdapterService.StartAdapter(ctx, "websocket"); err != nil {
 		return fmt.Errorf("failed to start WebSocket adapter: %w", err)
+	}
+	if err := s.AdapterService.StartAdapter(ctx, "grpc"); err != nil {
+		return fmt.Errorf("failed to start gRPC adapter: %w", err)
+	}
+
+	// Start actor service
+	if err := s.ActorService.StartAllDeviceActors(ctx); err != nil {
+		s.Logger.Warn("Failed to start all device actors", "error", err)
+	}
+	if err := s.ActorService.StartAllRoomActors(ctx); err != nil {
+		s.Logger.Warn("Failed to start all room actors", "error", err)
 	}
 
 	// Create default pipeline
@@ -240,7 +275,13 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 10*time.Second)
 	defer shutdownCancel()
 
+	// Stop actor service
+	s.ActorService.StopAllActors()
+
 	// Stop adapters
+	if err := s.AdapterService.StopAdapter(shutdownCtx, "grpc"); err != nil {
+		s.Logger.Error("Failed to stop gRPC adapter", "error", err)
+	}
 	if err := s.AdapterService.StopAdapter(shutdownCtx, "websocket"); err != nil {
 		s.Logger.Error("Failed to stop WebSocket adapter", "error", err)
 	}

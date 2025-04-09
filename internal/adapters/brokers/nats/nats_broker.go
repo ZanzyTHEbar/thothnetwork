@@ -241,6 +241,8 @@ func (b *MessageBroker) CreateStream(ctx context.Context, name string, subjects 
 	cfg := jetstream.StreamConfig{
 		Name:     name,
 		Subjects: subjects,
+		Storage:  jetstream.FileStorage,
+		MaxAge:   24 * time.Hour,
 	}
 
 	// Create stream
@@ -484,4 +486,66 @@ func (b *MessageBroker) SubscribeToStream(ctx context.Context, stream string, co
 	}()
 
 	return subscription, nil
+}
+
+// GetStreamInfo gets information about a stream
+func (b *MessageBroker) GetStreamInfo(ctx context.Context, name string) (*brokers.StreamInfo, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	// Check if connected
+	if b.conn == nil || b.js == nil {
+		return nil, errbuilder.GenericErr("Not connected to NATS", nil)
+	}
+
+	// Get stream
+	str, err := b.js.Stream(ctx, name)
+	if err != nil {
+		return nil, errbuilder.GenericErr("Failed to get stream", err)
+	}
+
+	// Get stream info
+	info, err := str.Info(ctx)
+	if err != nil {
+		return nil, errbuilder.GenericErr("Failed to get stream info", err)
+	}
+
+	// Convert to StreamInfo
+	return &brokers.StreamInfo{
+		Name:           info.Config.Name,
+		Subjects:       info.Config.Subjects,
+		MessageCount:   info.State.Msgs,
+		ByteCount:      info.State.Bytes,
+		FirstSequence:  info.State.FirstSeq,
+		LastSequence:   info.State.LastSeq,
+		FirstTimestamp: info.State.FirstTime,
+		LastTimestamp:  info.State.LastTime,
+	}, nil
+}
+
+// ListStreams lists all streams
+func (b *MessageBroker) ListStreams(ctx context.Context) ([]string, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	// Check if connected
+	if b.conn == nil || b.js == nil {
+		return nil, errbuilder.GenericErr("Not connected to NATS", nil)
+	}
+
+	// List streams
+	streams := make([]string, 0)
+
+	// Get stream names
+	streamNames := b.js.StreamNames(ctx)
+	for name := range streamNames.Name() {
+		streams = append(streams, name)
+	}
+
+	// Check for errors
+	if err := streamNames.Err(); err != nil {
+		return nil, errbuilder.GenericErr("Failed to list streams", err)
+	}
+
+	return streams, nil
 }

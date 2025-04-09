@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package thothnetwork.v1;
+package proto.thothnetwork.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
@@ -20,25 +20,25 @@ enum DeviceStatus {
 message Device {
   // ID is the unique identifier for the device
   string id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Name is the human-readable name of the device
   string name = 2 [(buf.validate.field).string.min_len = 1];
-  
+
   // Type is the type of the device
   string type = 3 [(buf.validate.field).string.min_len = 1];
-  
+
   // Status is the current status of the device
   DeviceStatus status = 4;
-  
+
   // Metadata is additional information about the device
   map<string, string> metadata = 5;
-  
+
   // LastSeen is the timestamp when the device was last seen
   google.protobuf.Timestamp last_seen = 6;
-  
+
   // CreatedAt is the timestamp when the device was created
   google.protobuf.Timestamp created_at = 7;
-  
+
   // UpdatedAt is the timestamp when the device was last updated
   google.protobuf.Timestamp updated_at = 8;
 }
@@ -47,10 +47,10 @@ message Device {
 message RegisterDeviceRequest {
   // Name is the human-readable name of the device
   string name = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Type is the type of the device
   string type = 2 [(buf.validate.field).string.min_len = 1];
-  
+
   // Metadata is additional information about the device
   map<string, string> metadata = 3;
 }
@@ -59,7 +59,7 @@ message RegisterDeviceRequest {
 message RegisterDeviceResponse {
   // ID is the unique identifier for the registered device
   string id = 1;
-  
+
   // Device is the registered device
   Device device = 2;
 }
@@ -80,13 +80,13 @@ message GetDeviceResponse {
 message UpdateDeviceRequest {
   // ID is the unique identifier for the device
   string id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Name is the human-readable name of the device
   string name = 2;
-  
+
   // Type is the type of the device
   string type = 3;
-  
+
   // Metadata is additional information about the device
   map<string, string> metadata = 4;
 }
@@ -113,10 +113,10 @@ message DeleteDeviceResponse {
 message ListDevicesRequest {
   // Types is the list of device types to filter by
   repeated string types = 1;
-  
+
   // Statuses is the list of device statuses to filter by
   repeated DeviceStatus statuses = 2;
-  
+
   // Metadata is the metadata to filter by
   map<string, string> metadata = 3;
 }
@@ -131,16 +131,16 @@ message ListDevicesResponse {
 service DeviceService {
   // RegisterDevice registers a new device
   rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
-  
+
   // GetDevice retrieves a device by ID
   rpc GetDevice(GetDeviceRequest) returns (GetDeviceResponse);
-  
+
   // UpdateDevice updates an existing device
   rpc UpdateDevice(UpdateDeviceRequest) returns (UpdateDeviceResponse);
-  
+
   // DeleteDevice deletes a device
   rpc DeleteDevice(DeleteDeviceRequest) returns (DeleteDeviceResponse);
-  
+
   // ListDevices lists devices with optional filtering
   rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse);
 }

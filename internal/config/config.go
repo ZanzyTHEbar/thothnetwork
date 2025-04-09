@@ -17,7 +17,9 @@ type Config struct {
 	HTTP      HTTPConfig      `mapstructure:"http"`
 	MQTT      MQTTConfig      `mapstructure:"mqtt"`
 	WebSocket WebSocketConfig `mapstructure:"websocket"`
+	GRPC      GRPCConfig      `mapstructure:"grpc"`
 	Tracing   TracingConfig   `mapstructure:"tracing"`
+	Actor     ActorConfig     `mapstructure:"actor"`
 }
 
 // ServerConfig holds configuration for the server
@@ -100,6 +102,19 @@ type TracingConfig struct {
 	ServiceVersion string `mapstructure:"service_version"`
 	Endpoint       string `mapstructure:"endpoint"`
 	Enabled        bool   `mapstructure:"enabled"`
+}
+
+// GRPCConfig holds configuration for gRPC
+type GRPCConfig struct {
+	Host string `mapstructure:"host"`
+	Port int    `mapstructure:"port"`
+}
+
+// ActorConfig holds configuration for the actor system
+type ActorConfig struct {
+	Address     string `mapstructure:"address"`
+	Port        int    `mapstructure:"port"`
+	ClusterName string `mapstructure:"cluster_name"`
 }
 
 // Load loads the configuration from file and environment variables
@@ -192,4 +207,13 @@ func setDefaults() {
 	viper.SetDefault("tracing.service_version", "0.1.0")
 	viper.SetDefault("tracing.endpoint", "http://localhost:14268/api/traces")
 	viper.SetDefault("tracing.enabled", false)
+
+	// gRPC defaults
+	viper.SetDefault("grpc.host", "0.0.0.0")
+	viper.SetDefault("grpc.port", 8083)
+
+	// Actor system defaults
+	viper.SetDefault("actor.address", "0.0.0.0")
+	viper.SetDefault("actor.port", 8084)
+	viper.SetDefault("actor.cluster_name", "thothnetwork-cluster")
 }

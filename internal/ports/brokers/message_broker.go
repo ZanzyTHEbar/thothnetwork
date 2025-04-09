@@ -40,6 +40,33 @@ type Subscription interface {
 	Topic() string
 }
 
+// StreamInfo contains information about a stream
+type StreamInfo struct {
+	// Name is the name of the stream
+	Name string
+
+	// Subjects is the list of subjects in the stream
+	Subjects []string
+
+	// MessageCount is the number of messages in the stream
+	MessageCount uint64
+
+	// ByteCount is the number of bytes in the stream
+	ByteCount uint64
+
+	// FirstSequence is the sequence number of the first message
+	FirstSequence uint64
+
+	// LastSequence is the sequence number of the last message
+	LastSequence uint64
+
+	// FirstTimestamp is the timestamp of the first message
+	FirstTimestamp time.Time
+
+	// LastTimestamp is the timestamp of the last message
+	LastTimestamp time.Time
+}
+
 // MessageBroker defines the interface for message brokers
 type MessageBroker interface {
 	// Connect connects to the message broker
@@ -56,12 +83,23 @@ type MessageBroker interface {
 
 	// Request sends a request message and waits for a response
 	Request(ctx context.Context, topic string, msg *message.Message, timeout time.Duration) (*message.Message, error)
+}
+
+// StreamBroker extends MessageBroker with stream capabilities
+type StreamBroker interface {
+	MessageBroker
 
 	// CreateStream creates a new stream
 	CreateStream(ctx context.Context, name string, subjects []string) error
 
 	// DeleteStream deletes a stream
 	DeleteStream(ctx context.Context, name string) error
+
+	// GetStreamInfo gets information about a stream
+	GetStreamInfo(ctx context.Context, name string) (*StreamInfo, error)
+
+	// ListStreams lists all streams
+	ListStreams(ctx context.Context) ([]string, error)
 
 	// CreateConsumer creates a new consumer for a stream
 	CreateConsumer(ctx context.Context, stream string, config ConsumerConfig) error

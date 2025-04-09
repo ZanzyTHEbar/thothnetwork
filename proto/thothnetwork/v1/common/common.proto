@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package proto.thothnetwork.v1.common;
+
+//import "buf/validate/validate.proto";
+//import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ZanzyTHEbar/thothnetwork/gen/proto/v1;thothnetworkv1";
+
+// Error response message
+message Error {
+  // Error code
+  int32 code = 1;
+  // Error message
+  string message = 2;
+  // Additional details
+  map<string, string> details = 3;
+}
+
+// Empty response message
+message EmptyResponse {}
+
+// Standard Delete response message
+message DeleteResponse {}
+
+// Standard Reorder response message
+message ReorderResponse {}
+
+// Standard Restore response message
+message RestoreResponse {}
+
+// Pagination request
+message PaginationRequest {
+  // Page number (1-based)
+  int32 page = 1;
+  // Items per page
+  int32 per_page = 2;
+}
+
+// Pagination response
+message PaginationResponse {
+  // Total items
+  int64 total = 1;
+  // Total pages
+  int32 total_pages = 2;
+  // Current page
+  int32 page = 3;
+  // Items per page
+  int32 per_page = 4;
+}
+
+// Config message that maps to the domain Config struct
+message Config {
+  // Additional configuration parameters
+  //map<string, string> parameters = 5;
+}

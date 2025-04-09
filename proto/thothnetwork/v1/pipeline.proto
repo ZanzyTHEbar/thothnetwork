@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package thothnetwork.v1;
+package proto.thothnetwork.v1;
 
 import "buf/validate/validate.proto";
-import "api/proto/v1/message.proto";
+import "proto/thothnetwork/v1/message.proto";
 
 option go_package = "github.com/ZanzyTHEbar/thothnetwork/gen/proto/v1;thothnetworkv1";
 
@@ -11,13 +11,13 @@ option go_package = "github.com/ZanzyTHEbar/thothnetwork/gen/proto/v1;thothnetwo
 message ProcessingStage {
   // ID is the unique identifier for the stage
   string id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Name is the name of the stage
   string name = 2 [(buf.validate.field).string.min_len = 1];
-  
+
   // Type is the type of the stage
   string type = 3 [(buf.validate.field).string.min_len = 1];
-  
+
   // Config is the configuration for the stage
   map<string, string> config = 4;
 }
@@ -26,16 +26,16 @@ message ProcessingStage {
 message Pipeline {
   // ID is the unique identifier for the pipeline
   string id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Name is the name of the pipeline
   string name = 2 [(buf.validate.field).string.min_len = 1];
-  
+
   // Stages is the list of stages in the pipeline
   repeated ProcessingStage stages = 3;
-  
+
   // InputTopic is the topic to subscribe to for input messages
   string input_topic = 4 [(buf.validate.field).string.min_len = 1];
-  
+
   // OutputTopic is the topic to publish output messages to
   string output_topic = 5 [(buf.validate.field).string.min_len = 1];
 }
@@ -44,13 +44,13 @@ message Pipeline {
 message CreatePipelineRequest {
   // Name is the name of the pipeline
   string name = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Stages is the list of stages in the pipeline
   repeated ProcessingStage stages = 2;
-  
+
   // InputTopic is the topic to subscribe to for input messages
   string input_topic = 3 [(buf.validate.field).string.min_len = 1];
-  
+
   // OutputTopic is the topic to publish output messages to
   string output_topic = 4 [(buf.validate.field).string.min_len = 1];
 }
@@ -59,7 +59,7 @@ message CreatePipelineRequest {
 message CreatePipelineResponse {
   // ID is the unique identifier for the created pipeline
   string id = 1;
-  
+
   // Pipeline is the created pipeline
   Pipeline pipeline = 2;
 }
@@ -80,16 +80,16 @@ message GetPipelineResponse {
 message UpdatePipelineRequest {
   // ID is the unique identifier for the pipeline
   string id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Name is the name of the pipeline
   string name = 2;
-  
+
   // Stages is the list of stages in the pipeline
   repeated ProcessingStage stages = 3;
-  
+
   // InputTopic is the topic to subscribe to for input messages
   string input_topic = 4;
-  
+
   // OutputTopic is the topic to publish output messages to
   string output_topic = 5;
 }
@@ -127,7 +127,7 @@ message ListPipelinesResponse {
 message ProcessMessageRequest {
   // PipelineID is the ID of the pipeline to use
   string pipeline_id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Message is the message to process
   Message message = 2;
 }
@@ -166,25 +166,25 @@ message StopPipelineResponse {
 service PipelineService {
   // CreatePipeline creates a new pipeline
   rpc CreatePipeline(CreatePipelineRequest) returns (CreatePipelineResponse);
-  
+
   // GetPipeline retrieves a pipeline by ID
   rpc GetPipeline(GetPipelineRequest) returns (GetPipelineResponse);
-  
+
   // UpdatePipeline updates an existing pipeline
   rpc UpdatePipeline(UpdatePipelineRequest) returns (UpdatePipelineResponse);
-  
+
   // DeletePipeline deletes a pipeline
   rpc DeletePipeline(DeletePipelineRequest) returns (DeletePipelineResponse);
-  
+
   // ListPipelines lists all pipelines
   rpc ListPipelines(ListPipelinesRequest) returns (ListPipelinesResponse);
-  
+
   // ProcessMessage processes a message through a pipeline
   rpc ProcessMessage(ProcessMessageRequest) returns (ProcessMessageResponse);
-  
+
   // StartPipeline starts a pipeline
   rpc StartPipeline(StartPipelineRequest) returns (StartPipelineResponse);
-  
+
   // StopPipeline stops a pipeline
   rpc StopPipeline(StopPipelineRequest) returns (StopPipelineResponse);
 }

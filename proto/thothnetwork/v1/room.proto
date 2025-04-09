@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package thothnetwork.v1;
+package proto.thothnetwork.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
@@ -19,22 +19,22 @@ enum RoomType {
 message Room {
   // ID is the unique identifier for the room
   string id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Name is the human-readable name of the room
   string name = 2 [(buf.validate.field).string.min_len = 1];
-  
+
   // Type is the type of the room
   RoomType type = 3;
-  
+
   // Devices is the list of device IDs in the room
   repeated string devices = 4;
-  
+
   // Metadata is additional information about the room
   map<string, string> metadata = 5;
-  
+
   // CreatedAt is the timestamp when the room was created
   google.protobuf.Timestamp created_at = 6;
-  
+
   // UpdatedAt is the timestamp when the room was last updated
   google.protobuf.Timestamp updated_at = 7;
 }
@@ -43,13 +43,13 @@ message Room {
 message CreateRoomRequest {
   // Name is the human-readable name of the room
   string name = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Type is the type of the room
   RoomType type = 2 [(buf.validate.field).enum.defined_only = true];
-  
+
   // Devices is the list of device IDs to add to the room
   repeated string devices = 3;
-  
+
   // Metadata is additional information about the room
   map<string, string> metadata = 4;
 }
@@ -58,7 +58,7 @@ message CreateRoomRequest {
 message CreateRoomResponse {
   // ID is the unique identifier for the created room
   string id = 1;
-  
+
   // Room is the created room
   Room room = 2;
 }
@@ -79,10 +79,10 @@ message GetRoomResponse {
 message UpdateRoomRequest {
   // ID is the unique identifier for the room
   string id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // Name is the human-readable name of the room
   string name = 2;
-  
+
   // Metadata is additional information about the room
   map<string, string> metadata = 3;
 }
@@ -109,10 +109,10 @@ message DeleteRoomResponse {
 message ListRoomsRequest {
   // Types is the list of room types to filter by
   repeated RoomType types = 1;
-  
+
   // DeviceID is the device ID to filter by
   string device_id = 2;
-  
+
   // Metadata is the metadata to filter by
   map<string, string> metadata = 3;
 }
@@ -127,7 +127,7 @@ message ListRoomsResponse {
 message AddDeviceToRoomRequest {
   // RoomID is the ID of the room
   string room_id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // DeviceID is the ID of the device to add
   string device_id = 2 [(buf.validate.field).string.min_len = 1];
 }
@@ -142,7 +142,7 @@ message AddDeviceToRoomResponse {
 message RemoveDeviceFromRoomRequest {
   // RoomID is the ID of the room
   string room_id = 1 [(buf.validate.field).string.min_len = 1];
-  
+
   // DeviceID is the ID of the device to remove
   string device_id = 2 [(buf.validate.field).string.min_len = 1];
 }
@@ -181,28 +181,28 @@ message FindRoomsForDeviceResponse {
 service RoomService {
   // CreateRoom creates a new room
   rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse);
-  
+
   // GetRoom retrieves a room by ID
   rpc GetRoom(GetRoomRequest) returns (GetRoomResponse);
-  
+
   // UpdateRoom updates an existing room
   rpc UpdateRoom(UpdateRoomRequest) returns (UpdateRoomResponse);
-  
+
   // DeleteRoom deletes a room
   rpc DeleteRoom(DeleteRoomRequest) returns (DeleteRoomResponse);
-  
+
   // ListRooms lists rooms with optional filtering
   rpc ListRooms(ListRoomsRequest) returns (ListRoomsResponse);
-  
+
   // AddDeviceToRoom adds a device to a room
   rpc AddDeviceToRoom(AddDeviceToRoomRequest) returns (AddDeviceToRoomResponse);
-  
+
   // RemoveDeviceFromRoom removes a device from a room
   rpc RemoveDeviceFromRoom(RemoveDeviceFromRoomRequest) returns (RemoveDeviceFromRoomResponse);
-  
+
   // ListDevicesInRoom lists all devices in a room
   rpc ListDevicesInRoom(ListDevicesInRoomRequest) returns (ListDevicesInRoomResponse);
-  
+
   // FindRoomsForDevice finds all rooms that contain a specific device
   rpc FindRoomsForDevice(FindRoomsForDeviceRequest) returns (FindRoomsForDeviceResponse);
 }

@@ -62,3 +62,12 @@ tracing:
   service_version: 0.1.0
   endpoint: http://localhost:14268/api/traces
   enabled: false
+
+grpc:
+  host: 0.0.0.0
+  port: 8083
+
+actor:
+  address: 0.0.0.0
+  port: 8084
+  cluster_name: thothnetwork-cluster
