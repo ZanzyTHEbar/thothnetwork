@@ -202,7 +202,7 @@ func (a *TwinActor) handleCommandMessage(ctx actor.Context, msg *message.Message
 	}
 
 	// Send response
-	response := message.NewMessage(
+	response := message.New(
 		uuid.New().String(),
 		a.twinID,
 		msg.Source,
@@ -218,14 +218,14 @@ func (a *TwinActor) handleCommandMessage(ctx actor.Context, msg *message.Message
 }
 
 // sendErrorResponse sends an error response to the original sender
-func (a *TwinActor) sendErrorResponse(ctx actor.Context, originalMsg *message.Message, code string, message string) {
+func (a *TwinActor) sendErrorResponse(ctx actor.Context, originalMsg *message.Message, code string, msg string) {
 	payload, _ := json.Marshal(map[string]any{
 		"status":  "error",
 		"code":    code,
-		"message": message,
+		"message": msg,
 	})
 
-	response := message.NewMessage(
+	response := message.New(
 		uuid.New().String(),
 		a.twinID,
 		originalMsg.Source,
@@ -278,7 +278,7 @@ func (a *TwinActor) checkDesiredStateDelta(ctx actor.Context) {
 		})
 
 		// Create command message
-		command := message.NewMessage(
+		command := message.New(
 			uuid.New().String(),
 			a.twinID,
 			"device:"+a.twinID,

@@ -65,7 +65,7 @@ func (s *Service) RegisterDevice(ctx context.Context, dev *device.Device) (strin
 	}
 
 	// Publish device registered event
-	event := message.NewMessage(
+	event := message.New(
 		uuid.New().String(),
 		"system",
 		"*",
@@ -100,7 +100,7 @@ func (s *Service) UpdateDevice(ctx context.Context, dev *device.Device) error {
 	}
 
 	// Publish device updated event
-	event := message.NewMessage(
+	event := message.New(
 		uuid.New().String(),
 		"system",
 		"*",
@@ -129,7 +129,7 @@ func (s *Service) DeleteDevice(ctx context.Context, id string) error {
 	}
 
 	// Publish device deleted event
-	event := message.NewMessage(
+	event := message.New(
 		uuid.New().String(),
 		"system",
 		"*",

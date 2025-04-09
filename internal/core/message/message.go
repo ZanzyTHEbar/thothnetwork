@@ -46,7 +46,7 @@ type Message struct {
 }
 
 // NewMessage creates a new message
-func NewMessage(id, source, target string, msgType Type, payload []byte) *Message {
+func New(id, source, target string, msgType Type, payload []byte) *Message {
 	return &Message{
 		ID:          id,
 		Source:      source,

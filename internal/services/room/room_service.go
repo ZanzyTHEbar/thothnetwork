@@ -55,7 +55,7 @@ func (s *Service) CreateRoom(ctx context.Context, r *room.Room) (string, error) 
 	}
 
 	// Publish room created event
-	event := message.NewMessage(
+	event := message.New(
 		uuid.New().String(),
 		"system",
 		"*",
@@ -90,7 +90,7 @@ func (s *Service) UpdateRoom(ctx context.Context, r *room.Room) error {
 	}
 
 	// Publish room updated event
-	event := message.NewMessage(
+	event := message.New(
 		uuid.New().String(),
 		"system",
 		"*",
@@ -113,7 +113,7 @@ func (s *Service) DeleteRoom(ctx context.Context, id string) error {
 	}
 
 	// Publish room deleted event
-	event := message.NewMessage(
+	event := message.New(
 		uuid.New().String(),
 		"system",
 		"*",
@@ -152,7 +152,7 @@ func (s *Service) AddDeviceToRoom(ctx context.Context, roomID, deviceID string) 
 	}
 
 	// Publish device added to room event
-	event := message.NewMessage(
+	event := message.New(
 		uuid.New().String(),
 		"system",
 		"*",
@@ -175,7 +175,7 @@ func (s *Service) RemoveDeviceFromRoom(ctx context.Context, roomID, deviceID str
 	}
 
 	// Publish device removed from room event
-	event := message.NewMessage(
+	event := message.New(
 		uuid.New().String(),
 		"system",
 		"*",
@@ -233,3 +233,4 @@ func (s *Service) FindRoomsForDevice(ctx context.Context, deviceID string) ([]*r
 	}
 	return rooms, nil
 }
+

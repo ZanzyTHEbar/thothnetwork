@@ -144,7 +144,7 @@ func (a *RoomActor) handleCommandMessage(ctx actor.Context, msg *message.Message
 	}
 
 	// Send response
-	response := message.NewMessage(
+	response := message.New(
 		uuid.New().String(),
 		a.roomID,
 		msg.Source,
@@ -260,7 +260,7 @@ func (a *RoomActor) broadcastToDevices(ctx actor.Context, payload any) {
 
 	// Send command to each device
 	for deviceID, pid := range devices {
-		command := message.NewMessage(
+		command := message.New(
 			uuid.New().String(),
 			a.roomID,
 			deviceID,
@@ -274,14 +274,14 @@ func (a *RoomActor) broadcastToDevices(ctx actor.Context, payload any) {
 }
 
 // sendErrorResponse sends an error response to the original sender
-func (a *RoomActor) sendErrorResponse(ctx actor.Context, originalMsg *message.Message, code string, message string) {
+func (a *RoomActor) sendErrorResponse(ctx actor.Context, originalMsg *message.Message, code string, msg string) {
 	payload, _ := json.Marshal(map[string]any{
 		"status":  "error",
 		"code":    code,
-		"message": message,
+		"message": msg,
 	})
 
-	response := message.NewMessage(
+	response := message.New(
 		uuid.New().String(),
 		a.roomID,
 		originalMsg.Source,

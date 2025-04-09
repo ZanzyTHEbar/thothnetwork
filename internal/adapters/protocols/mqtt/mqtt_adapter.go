@@ -226,7 +226,7 @@ func (a *Adapter) handleDeviceMessage(client mqtt.Client, mqttMsg mqtt.Message) 
 	}
 
 	// Create message
-	msg := message.NewMessage(
+	msg := message.New(
 		uuid.New().String(),
 		deviceID,
 		"*", // Target will be determined by the handler
@@ -250,7 +250,7 @@ func (a *Adapter) handleDeviceMessage(client mqtt.Client, mqttMsg mqtt.Message) 
 // handleBroadcastMessage handles broadcast messages
 func (a *Adapter) handleBroadcastMessage(client mqtt.Client, mqttMsg mqtt.Message) {
 	// Create message
-	msg := message.NewMessage(
+	msg := message.New(
 		uuid.New().String(),
 		"broadcast",
 		"*", // Target will be determined by the handler

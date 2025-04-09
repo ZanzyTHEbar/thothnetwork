@@ -309,7 +309,7 @@ func (s *Service) GetDeviceState(ctx context.Context, deviceID string) (*device.
 }
 
 // GetRoomDevices gets the devices in a room actor
-func (s *Service) GetRoomDevices(ctx context.Context, roomID string) ([]string, error) {
+func (s *Service) GetRoomDevices(ctx context.Context, roomID string) (map[string]*actor.PID, error) {
 	// Check if actor exists
 	val, exists := s.roomActors.Get(roomID)
 	if !exists {
@@ -326,7 +326,9 @@ func (s *Service) GetRoomDevices(ctx context.Context, roomID string) ([]string, 
 	pid := val.(*actor.PID)
 
 	// Get room devices
-	response, err := s.actorSystem.Engine().Request(pid, &actorpkg.GetDevicesQuery{}, 5*time.Second).Result()
+	response, err := s.actorSystem.Engine().
+		Request(pid, &actorpkg.GetDevicesQuery{}, 5*time.Second).
+		Result()
 	if err != nil {
 		return nil, errbuilder.NewErrBuilder().
 			WithMsg(fmt.Sprintf("Failed to get room devices: %s", err.Error())).
@@ -342,7 +344,7 @@ func (s *Service) GetRoomDevices(ctx context.Context, roomID string) ([]string, 
 			WithCode(errbuilder.CodeInternal)
 	}
 
-	return devicesResp.DeviceIDs, nil
+	return devicesResp.Devices, nil
 }
 
 // AddDeviceToRoom adds a device to a room actor

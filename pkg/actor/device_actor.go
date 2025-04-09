@@ -206,7 +206,7 @@ func (a *DeviceActor) handleCommandMessage(ctx actor.Context, msg *message.Messa
 	}
 
 	// Send response
-	response := message.NewMessage(
+	response := message.New(
 		uuid.New().String(),
 		a.deviceID,
 		msg.Source,
@@ -231,7 +231,7 @@ func (a *DeviceActor) handleCommandMessage(ctx actor.Context, msg *message.Messa
 
 		// Create state update message
 		stateUpdatePayload, _ := json.Marshal(state)
-		stateUpdate := message.NewMessage(
+		stateUpdate := message.New(
 			uuid.New().String(),
 			a.deviceID,
 			"twin:"+a.deviceID,
@@ -282,7 +282,7 @@ func (a *DeviceActor) handleEventMessage(ctx actor.Context, msg *message.Message
 
 			// Create state update message
 			stateUpdatePayload, _ := json.Marshal(state)
-			stateUpdate := message.NewMessage(
+			stateUpdate := message.New(
 				uuid.New().String(),
 				a.deviceID,
 				"twin:"+a.deviceID,
@@ -332,7 +332,7 @@ func (a *DeviceActor) handleTelemetryMessage(ctx actor.Context, msg *message.Mes
 	// If we have a twin, update it with the new telemetry data
 	if a.twinPID != nil {
 		// Create state update message
-		stateUpdate := message.NewMessage(
+		stateUpdate := message.New(
 			uuid.New().String(),
 			a.deviceID,
 			"twin:"+a.deviceID,
@@ -350,14 +350,14 @@ func (a *DeviceActor) handleTelemetryMessage(ctx actor.Context, msg *message.Mes
 }
 
 // sendErrorResponse sends an error response to the original sender
-func (a *DeviceActor) sendErrorResponse(ctx actor.Context, originalMsg *message.Message, code string, message string) {
+func (a *DeviceActor) sendErrorResponse(ctx actor.Context, originalMsg *message.Message, code string, msg string) {
 	payload, _ := json.Marshal(map[string]any{
 		"status":  "error",
 		"code":    code,
-		"message": message,
+		"message": msg,
 	})
 
-	response := message.NewMessage(
+	response := message.New(
 		uuid.New().String(),
 		a.deviceID,
 		originalMsg.Source,
@@ -429,7 +429,7 @@ func (a *DeviceActor) checkThresholds(ctx actor.Context, telemetry map[string]an
 			},
 		})
 
-		alert := message.NewMessage(
+		alert := message.New(
 			uuid.New().String(),
 			a.deviceID,
 			"alerts",

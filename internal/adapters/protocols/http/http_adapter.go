@@ -189,7 +189,7 @@ func (a *Adapter) handleMessages(w http.ResponseWriter, r *http.Request) {
 // handleListDevices handles GET /devices
 func (a *Adapter) handleListDevices(w http.ResponseWriter, r *http.Request) {
 	// Create a message for listing devices
-	msg := message.NewMessage(
+	msg := message.New(
 		uuid.New().String(),
 		"http",
 		"*",
@@ -222,7 +222,7 @@ func (a *Adapter) handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a message for creating a device
-	msg := message.NewMessage(
+	msg := message.New(
 		uuid.New().String(),
 		"http",
 		"*",
@@ -248,7 +248,7 @@ func (a *Adapter) handleGetDevice(w http.ResponseWriter, r *http.Request, device
 	}
 
 	// Create a message for getting a device
-	msg := message.NewMessage(
+	msg := message.New(
 		uuid.New().String(),
 		"http",
 		"*",
@@ -284,7 +284,7 @@ func (a *Adapter) handleUpdateDevice(w http.ResponseWriter, r *http.Request, dev
 	}
 
 	// Create a message for updating a device
-	msg := message.NewMessage(
+	msg := message.New(
 		uuid.New().String(),
 		"http",
 		"*",
@@ -310,7 +310,7 @@ func (a *Adapter) handleDeleteDevice(w http.ResponseWriter, r *http.Request, dev
 	}
 
 	// Create a message for deleting a device
-	msg := message.NewMessage(
+	msg := message.New(
 		uuid.New().String(),
 		"http",
 		"*",
@@ -363,7 +363,7 @@ func (a *Adapter) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a message
-	msg := message.NewMessage(
+	msg := message.New(
 		uuid.New().String(),
 		"http",
 		body.Target,
@@ -404,7 +404,7 @@ func (a *Adapter) processMessage(w http.ResponseWriter, r *http.Request, msg *me
 		// Handle message
 		if err := handler(ctxWithValue, msg); err != nil {
 			a.logger.Error("Failed to handle message", "error", err)
-			respChan <- message.NewMessage(
+			respChan <- message.New(
 				uuid.New().String(),
 				"system",
 				msg.Source,
