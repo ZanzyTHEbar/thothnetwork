@@ -16,8 +16,10 @@ thothnetwork-cli
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-# Go workspace file
+# Go
 go.work
+
+pkg/gen/
 
 # IDE files
 .idea/
@@ -39,3 +41,7 @@ temp/
 # Environment variables
 .env
 .env.local
+
+## Custom
+
+todo
