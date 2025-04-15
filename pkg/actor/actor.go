@@ -28,6 +28,9 @@ type ActorSystem struct {
 	twinActors     *concurrent.HashMap
 	roomActors     *concurrent.HashMap
 	pipelineActors *concurrent.HashMap
+
+	// Add Supervisor field for actor supervision
+	Supervisor *Supervisor
 }
 
 // Config holds configuration for the actor system
@@ -38,7 +41,7 @@ type Config struct {
 }
 
 // NewActorSystem creates a new actor system
-func NewActorSystem(config Config, log logger.Logger) *ActorSystem {
+func NewActorSystem(config Config, log logger.Logger, supervisor *Supervisor) *ActorSystem {
 	// Create a new actor engine with default config
 	engineConfig := actor.NewEngineConfig()
 	engine, _ := actor.NewEngine(engineConfig)
@@ -74,15 +77,16 @@ func NewActorSystem(config Config, log logger.Logger) *ActorSystem {
 	})
 
 	system := &ActorSystem{
-		engine:            engine,
-		config:            config,
-		logger:            logger,
+		engine:             engine,
+		config:             config,
+		logger:             logger,
 		passivationManager: passivationManager,
-		metrics:           metrics,
-		deviceActors:      concurrent.NewHashMap(16),
-		twinActors:        concurrent.NewHashMap(16),
-		roomActors:        concurrent.NewHashMap(16),
-		pipelineActors:    concurrent.NewHashMap(16),
+		metrics:            metrics,
+		deviceActors:       concurrent.NewHashMap(16),
+		twinActors:         concurrent.NewHashMap(16),
+		roomActors:         concurrent.NewHashMap(16),
+		pipelineActors:     concurrent.NewHashMap(16),
+		Supervisor:         supervisor, // Attach supervisor
 	}
 
 	// Start metrics collection
@@ -106,6 +110,11 @@ func (s *ActorSystem) SpawnDevice(deviceID string) (*actor.PID, error) {
 	// props := actor.NewProps(NewDeviceActor(deviceID, s.logger))
 	// For now, we'll use a simplified approach
 	pid := actor.NewPID("local", deviceID)
+
+	// Register with supervisor if present
+	if s.Supervisor != nil {
+		s.Supervisor.RegisterChild(deviceID, pid)
+	}
 
 	// Record activity in passivation manager
 	s.passivationManager.RecordActivity(deviceID)
@@ -156,6 +165,11 @@ func (s *ActorSystem) SpawnRoom(roomID string) (*actor.PID, error) {
 	// Create a new room actor
 	// Note: The API has changed, so we're adapting to the current version
 	pid := actor.NewPID("local", roomID)
+
+	// Register with supervisor if present
+	if s.Supervisor != nil {
+		s.Supervisor.RegisterChild(roomID, pid)
+	}
 
 	// Record activity in passivation manager
 	s.passivationManager.RecordActivity(roomID)
@@ -233,8 +247,6 @@ func (s *ActorSystem) GetPipelineActorCount() int {
 func (s *ActorSystem) GetTotalActorCount() int {
 	return s.GetDeviceActorCount() + s.GetTwinActorCount() + s.GetRoomActorCount() + s.GetPipelineActorCount()
 }
-
-
 
 // Commands and Queries
 

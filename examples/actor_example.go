@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/ZanzyTHEbar/thothnetwork/internal/adapters/repositories/memory"
 	"github.com/ZanzyTHEbar/thothnetwork/internal/core/device"
@@ -33,12 +34,20 @@ func main() {
 	deviceRepo := memory.NewDeviceRepository()
 	roomRepo := memory.NewRoomRepository()
 
+	// Create a default supervisor for the actor system
+	supervisor := actor.NewSupervisor(actor.SupervisorConfig{
+		Strategy:       actor.OneForOneStrategy,
+		MaxRetries:     10,
+		WithinDuration: time.Minute,
+		Logger:         log,
+	})
+
 	// Create actor system
 	actorSystem := actor.NewActorSystem(actor.Config{
-		Address:     "",  // No remote address for this example
-		Port:        0,   // No port needed
-		ClusterName: "",  // No cluster name needed
-	}, log)
+		Address:     "", // No remote address for this example
+		Port:        0,  // No port needed
+		ClusterName: "", // No cluster name needed
+	}, log, supervisor)
 
 	// Create actor service
 	actorService := actorservice.NewService(

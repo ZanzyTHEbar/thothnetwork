@@ -30,6 +30,9 @@ type Service struct {
 	// Circuit breakers for external dependencies
 	deviceRepoCircuitBreaker *circuitbreaker.CircuitBreaker
 	roomRepoCircuitBreaker   *circuitbreaker.CircuitBreaker
+
+	// Add supervisor field to Service
+	supervisor *actorpkg.Supervisor
 }
 
 // NewService creates a new actor service
@@ -57,15 +60,21 @@ func NewService(
 		Logger:           serviceLogger,
 	})
 
+	// Create supervisor for device and room actors
+	supervisor := actorpkg.CreateOneForOneSupervisor(10, time.Minute, serviceLogger)
+	// Pass supervisor to actor system
+	actorSystem.Supervisor = supervisor
+
 	return &Service{
-		actorSystem:             actorSystem,
-		deviceRepo:              deviceRepo,
-		roomRepo:                roomRepo,
-		deviceActors:            concurrent.NewHashMap(16),
-		roomActors:              concurrent.NewHashMap(16),
-		logger:                  serviceLogger,
+		actorSystem:              actorSystem,
+		deviceRepo:               deviceRepo,
+		roomRepo:                 roomRepo,
+		deviceActors:             concurrent.NewHashMap(16),
+		roomActors:               concurrent.NewHashMap(16),
+		logger:                   serviceLogger,
 		deviceRepoCircuitBreaker: deviceRepoCircuitBreaker,
 		roomRepoCircuitBreaker:   roomRepoCircuitBreaker,
+		supervisor:               supervisor,
 	}
 }
 

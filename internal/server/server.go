@@ -123,12 +123,20 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		Timeout:       cfg.NATS.Timeout,
 	}, log)
 
+	// Create a default supervisor for the actor system
+	supervisor := actor.NewSupervisor(actor.SupervisorConfig{
+		Strategy:       actor.OneForOneStrategy,
+		MaxRetries:     10,
+		WithinDuration: time.Minute,
+		Logger:         log,
+	})
+
 	// Create actor system
 	server.ActorSystem = actor.NewActorSystem(actor.Config{
 		Address:     cfg.Actor.Address,
 		Port:        cfg.Actor.Port,
 		ClusterName: cfg.Actor.ClusterName,
-	}, log)
+	}, log, supervisor)
 
 	// Create services
 	server.DeviceService = deviceService.NewService(server.DeviceRepo, server.TwinRepo, server.Broker, log)
@@ -202,7 +210,6 @@ func (s *Server) Start(ctx context.Context) error {
 	if err := s.AdapterService.RegisterAdapter("websocket", s.WebSocketAdapter); err != nil {
 		return fmt.Errorf("failed to register WebSocket adapter: %w", err)
 	}
-	
 
 	// Start adapters
 	if err := s.AdapterService.StartAdapter(ctx, "http"); err != nil {
